@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WeatherNow AI — Weather Nowcasting &amp; Early Warning System</title>
+    <meta name="description" content="AI-Powered Weather Nowcasting and Early Warning Dashboard for short-term weather prediction and decision support." />
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'gray-900': '#1a202c',
+              'gray-800': '#2d3748',
+              'gray-700': '#4a5568',
+              'gray-600': '#718096',
+              'gray-500': '#a0aec0',
+              'gray-400': '#cbd5e0',
+              'teal-500': '#38b2ac',
+              'teal-600': '#319795',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  </head>
+  <body class="bg-gray-900 text-gray-300 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
