@@ -1,0 +1,231 @@
+{
+  "audit_timestamp": "2026-09-28T18:51:14.413885+00:00",
+  "status": "PASS",
+  "input": {
+    "tensor_shape": [
+      6,
+      8,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "channel_order": [
+      "B13",
+      "t2m",
+      "d2m",
+      "u10",
+      "v10",
+      "cape",
+      "cin",
+      "tp"
+    ],
+    "grid_bounds": {
+      "height": 128,
+      "width": 128,
+      "lat_min": 8.0,
+      "lat_max": 38.0,
+      "lon_min": 68.0,
+      "lon_max": 98.0,
+      "row_0_latitude": 38.0,
+      "row_127_latitude": 8.0,
+      "col_0_longitude": 68.0,
+      "col_127_longitude": 98.0
+    },
+    "synthetic_data_used": false
+  },
+  "normalization": {
+    "formula": "(x - MEAN[c]) / STD[c]",
+    "frozen_statistics": true,
+    "dynamic_normalization": false
+  },
+  "model": {
+    "architecture": "SIHV3Nowcast",
+    "checkpoint_sha256": "3c333cb479b2a350535482a3d0764c6b647dc2991ec9eed90a40a3d0c41ff276",
+    "parameter_count": 200996,
+    "evaluation_mode": true
+  },
+  "horizons": {
+    "+30": {
+      "min": 1.1891305803146679e-05,
+      "max": 0.9998506307601929,
+      "mean": 0.06590016186237335,
+      "std": 0.23264172673225403
+    },
+    "+60": {
+      "min": 7.307086343644187e-05,
+      "max": 0.9988611936569214,
+      "mean": 0.06924311071634293,
+      "std": 0.23207102715969086
+    },
+    "+90": {
+      "min": 0.0002614890690892935,
+      "max": 0.997707724571228,
+      "mean": 0.07136420160531998,
+      "std": 0.22778770327568054
+    },
+    "+120": {
+      "min": 0.0005738219479098916,
+      "max": 0.9963485598564148,
+      "mean": 0.07088758051395416,
+      "std": 0.22075094282627106
+    }
+  },
+  "provenance": {
+    "tensor_shape": [
+      6,
+      8,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "channel_order": [
+      "B13",
+      "t2m",
+      "d2m",
+      "u10",
+      "v10",
+      "cape",
+      "cin",
+      "tp"
+    ],
+    "grid_dimensions": {
+      "height": 128,
+      "width": 128,
+      "lat_min": 8.0,
+      "lat_max": 38.0,
+      "lon_min": 68.0,
+      "lon_max": 98.0,
+      "row_0_latitude": 38.0,
+      "row_127_latitude": 8.0,
+      "col_0_longitude": 68.0,
+      "col_127_longitude": 98.0
+    },
+    "synthetic_data_used": false,
+    "frames": [
+      {
+        "frame_index": 0,
+        "target_timestamp": "2026-09-28T15:40:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1540 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "linear",
+          "t0": "2026-09-28T15:00:00+00:00",
+          "t1": "2026-09-28T16:00:00+00:00",
+          "alpha": 0.6666666666666666
+        }
+      },
+      {
+        "frame_index": 1,
+        "target_timestamp": "2026-09-28T15:50:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1550 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "linear",
+          "t0": "2026-09-28T15:00:00+00:00",
+          "t1": "2026-09-28T16:00:00+00:00",
+          "alpha": 0.8333333333333334
+        }
+      },
+      {
+        "frame_index": 2,
+        "target_timestamp": "2026-09-28T16:00:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1600 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "exact_match",
+          "t0": "2026-09-28T16:00:00+00:00",
+          "t1": "2026-09-28T16:00:00+00:00",
+          "alpha": 0.0
+        }
+      },
+      {
+        "frame_index": 3,
+        "target_timestamp": "2026-09-28T16:10:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1610 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "linear",
+          "t0": "2026-09-28T16:00:00+00:00",
+          "t1": "2026-09-28T17:00:00+00:00",
+          "alpha": 0.16666666666666666
+        }
+      },
+      {
+        "frame_index": 4,
+        "target_timestamp": "2026-09-28T16:20:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1620 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "linear",
+          "t0": "2026-09-28T16:00:00+00:00",
+          "t1": "2026-09-28T17:00:00+00:00",
+          "alpha": 0.3333333333333333
+        }
+      },
+      {
+        "frame_index": 5,
+        "target_timestamp": "2026-09-28T16:30:00+00:00",
+        "himawari_source": "AHI-L1b-FLDK/2026/09/28/1630 (Segments S0210-S0510)",
+        "gfs_interpolation": {
+          "interpolation_type": "linear",
+          "t0": "2026-09-28T16:00:00+00:00",
+          "t1": "2026-09-28T17:00:00+00:00",
+          "alpha": 0.5
+        }
+      }
+    ],
+    "channel_statistics": {
+      "B13": {
+        "channel_index": 0,
+        "min": 191.153076171875,
+        "max": 294.7572326660156,
+        "mean": 272.6570739746094,
+        "std": 20.5132999420166
+      },
+      "t2m": {
+        "channel_index": 1,
+        "min": 18.200000762939453,
+        "max": 28.5,
+        "mean": 19.52074432373047,
+        "std": 2.26326060295105
+      },
+      "d2m": {
+        "channel_index": 2,
+        "min": -3.3499999046325684,
+        "max": 24.26666831970215,
+        "mean": 0.42843326926231384,
+        "std": 6.814035415649414
+      },
+      "u10": {
+        "channel_index": 3,
+        "min": -1.7103006839752197,
+        "max": 3.456202745437622,
+        "mean": -1.208536148071289,
+        "std": 0.8688939809799194
+      },
+      "v10": {
+        "channel_index": 4,
+        "min": -1.1871206760406494,
+        "max": 3.356459856033325,
+        "mean": 2.6395740509033203,
+        "std": 0.8513073921203613
+      },
+      "cape": {
+        "channel_index": 5,
+        "min": 0.0,
+        "max": 1305.0,
+        "mean": 92.24767303466797,
+        "std": 201.8223114013672
+      },
+      "cin": {
+        "channel_index": 6,
+        "min": 0.0,
+        "max": 50.000003814697266,
+        "mean": 45.632415771484375,
+        "std": 9.356049537658691
+      },
+      "tp": {
+        "channel_index": 7,
+        "min": 0.0,
+        "max": 0.00139999995008111,
+        "mean": 3.582444696803577e-05,
+        "std": 0.00013855718134436756
+      }
+    }
+  }
+}

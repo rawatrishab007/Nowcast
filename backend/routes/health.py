@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status, Response
 from schemas import HealthResponse
 from model_loader import model_manager
+from config import settings
 
 router = APIRouter()
 
@@ -15,14 +16,17 @@ def get_health(response: Response) -> HealthResponse:
             status="ok",
             model_loaded=True,
             device=str(model_manager.get_device()),
+            model_name=settings.MODEL_NAME,
+            checkpoint=settings.MODEL_PATH,
             message="Model loaded and operational."
         )
     else:
-        # Return 503 Service Unavailable when model is not loaded to indicate inference inability
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return HealthResponse(
             status="error",
             model_loaded=False,
             device=str(model_manager.get_device()),
+            model_name=settings.MODEL_NAME,
+            checkpoint=settings.MODEL_PATH,
             message=model_manager.load_error or "Model weights not loaded."
         )

@@ -114,8 +114,8 @@ class TestSIHV3Backend(unittest.TestCase):
         self.assertEqual(res.json()["status"], "error")
 
     def test_08_predict_model_unloaded_returns_503(self):
-        """Verify POST /api/predict returns 503 when checkpoint file is missing."""
-        # Ensure model is not loaded (as checkpoint is not in repo yet)
+        """Verify handling when model checkpoint state is queried."""
+        # If model is not loaded, verify 503 response
         if not model_manager.is_loaded():
             frames = []
             for f in range(6):
@@ -129,5 +129,113 @@ class TestSIHV3Backend(unittest.TestCase):
             self.assertEqual(res.json()["status"], "error")
             self.assertIn("not loaded", res.json()["message"])
 
+    def test_09_sample_input_and_demo_prediction(self):
+        """Verify GET /api/sample-input and POST /api/predict/demo execute with model."""
+        # Load model for test
+        loaded = model_manager.load_model()
+        self.assertTrue(loaded, "Checkpoint should load successfully")
+
+        # Test sample input structure
+        sample_res = self.client.get("/api/sample-input")
+        self.assertEqual(sample_res.status_code, 200)
+        sample_data = sample_res.json()
+        self.assertIn("frames", sample_data)
+        self.assertEqual(len(sample_data["frames"]), 6)
+
+        # Test demo prediction
+        demo_res = self.client.post("/api/predict/demo")
+        self.assertEqual(demo_res.status_code, 200)
+        demo_data = demo_res.json()
+        self.assertEqual(demo_data["status"], "success")
+        self.assertIn("horizons", demo_data)
+        self.assertEqual(list(demo_data["horizons"].keys()), ["30", "60", "90", "120"])
+        # Check grid dimensions
+        grid_30 = demo_data["horizons"]["30"]["map"]
+        self.assertEqual(len(grid_30), 128)
+        self.assertEqual(len(grid_30[0]), 128)
+
+        # Check values are probabilities in [0.0, 1.0]
+        val = grid_30[64][64]
+        self.assertTrue(0.0 <= val <= 1.0)
+
+    def test_10_spatial_interpolation_and_unit_conversions(self):
+        """Verify spatial bilinear interpolation to (128, 128) and unit conversion formulas."""
+        from data_providers.spatial import (
+            interpolate_to_target_grid,
+            kelvin_to_celsius,
+            celsius_to_kelvin,
+            mm_to_meters,
+            wind_components_from_speed_dir,
+        )
+
+        # 1. Test unit conversions
+        self.assertAlmostEqual(float(kelvin_to_celsius(np.array([273.15]))[0]), 0.0, places=4)
+        self.assertAlmostEqual(float(kelvin_to_celsius(np.array([298.15]))[0]), 25.0, places=4)
+        self.assertAlmostEqual(float(celsius_to_kelvin(np.array([0.0]))[0]), 273.15, places=4)
+        self.assertAlmostEqual(float(mm_to_meters(np.array([10.0]))[0]), 0.01, places=5)
+
+        u, v = wind_components_from_speed_dir(np.array([10.0]), np.array([270.0]))
+        # 270 deg is wind coming from West -> u should be positive eastward (+10.0)
+        self.assertAlmostEqual(float(u[0]), 10.0, places=2)
+        self.assertAlmostEqual(float(v[0]), 0.0, places=2)
+
+        # 2. Test spatial interpolation from 10x10 to (128, 128)
+        src_grid = np.ones((10, 10), dtype=np.float32) * 50.0
+        src_lats = np.linspace(38.0, 8.0, 10)
+        src_lons = np.linspace(68.0, 98.0, 10)
+        out_grid = interpolate_to_target_grid(src_grid, src_lats, src_lons)
+        self.assertEqual(out_grid.shape, (128, 128))
+        self.assertAlmostEqual(float(out_grid[0, 0]), 50.0, places=3)
+        self.assertAlmostEqual(float(out_grid[127, 127]), 50.0, places=3)
+
+    def test_11_data_provider_abstraction_and_validation(self):
+        """Verify DataProvider interface, SyntheticDataProvider, and OperationalDataProvider output contracts."""
+        from data_providers import (
+            get_data_provider,
+            SyntheticDataProvider,
+            OperationalDataProvider,
+            DataValidationError,
+        )
+
+        # 1. Synthetic Data Provider
+        synth = get_data_provider("synthetic")
+        self.assertFalse(synth.is_live)
+        synth_frames = synth.get_frames()
+        self.assertEqual(len(synth_frames), 6)
+        for ch in settings.CHANNELS:
+            self.assertEqual(len(synth_frames[0][ch]), 128)
+            self.assertEqual(len(synth_frames[0][ch][0]), 128)
+
+        # 2. Operational Data Provider
+        op = OperationalDataProvider()
+        self.assertTrue(op.is_live)
+        op_frames = op.get_frames()
+        self.assertEqual(len(op_frames), 6)
+        for ch in settings.CHANNELS:
+            self.assertEqual(len(op_frames[0][ch]), 128)
+            self.assertEqual(len(op_frames[0][ch][0]), 128)
+
+        # 3. Validation failure when frame missing channel
+        bad_frames = [{"timestamp": "2026-09-28T00:00:00Z"}]
+        with self.assertRaises(DataValidationError):
+            synth.validate_frames(bad_frames)
+
+    def test_12_operational_live_prediction_endpoint(self):
+        """Verify POST /api/predict/live executes real model on operational atmospheric sequence."""
+        res = self.client.post("/api/predict/live")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertIn("horizons", data)
+        self.assertEqual(list(data["horizons"].keys()), ["30", "60", "90", "120"])
+        for h_key in ["30", "60", "90", "120"]:
+            grid = data["horizons"][h_key]["map"]
+            self.assertEqual(len(grid), 128)
+            self.assertEqual(len(grid[0]), 128)
+            self.assertTrue(0.0 <= grid[64][64] <= 1.0)
+
+
 if __name__ == "__main__":
     unittest.main()
+
+

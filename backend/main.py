@@ -10,7 +10,6 @@ from config import settings
 from model_loader import model_manager
 from routes.health import router as health_router
 from routes.prediction import router as prediction_router
-from routes.hazards import router as hazards_router
 
 # Configure logging
 logging.basicConfig(
@@ -24,7 +23,7 @@ logger = logging.getLogger("weathernow.main")
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    Initializes device detection and attempts to load the SIH V3 checkpoint once on startup.
+    Loads the SIH V3 ConvLSTM checkpoint once on startup.
     """
     logger.info("Initializing WeatherNow AI Backend Service...")
     logger.info(f"Target Checkpoint: {settings.MODEL_PATH}")
@@ -43,8 +42,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="WeatherNow AI — SIH V3 Weather Nowcasting API",
     description=(
-        "FastAPI service for the SIH V3 Deep-Convection / Cold-Cloud ConvLSTM Nowcasting Model. "
-        "Provides 0–120 minute nowcasting predictions based on 6 temporal frames across 8 meteorological channels."
+        "FastAPI service for the SIH V3 Cold-Cloud / Deep-Convection ConvLSTM Nowcasting Model. "
+        "Provides 0–120 minute nowcasting predictions (P(future B13 < 235 K)) across the Indian subcontinent."
     ),
     version=settings.MODEL_VERSION,
     lifespan=lifespan,
@@ -106,7 +105,6 @@ async def generic_exception_handler(request: Request, exc: Exception):
 # ==============================================================================
 app.include_router(health_router, prefix="/api", tags=["System Health"])
 app.include_router(prediction_router, prefix="/api", tags=["Nowcasting Predictions"])
-app.include_router(hazards_router, prefix="/api", tags=["Hazard Proxies"])
 
 @app.get("/", tags=["Root"])
 def root_info():
@@ -116,7 +114,8 @@ def root_info():
         "version": settings.MODEL_VERSION,
         "docs": "/docs",
         "health": "/api/health",
-        "model_info": "/api/model-info"
+        "model_info": "/api/model-info",
+        "live_prediction": "/api/predict/live"
     }
 
 if __name__ == "__main__":

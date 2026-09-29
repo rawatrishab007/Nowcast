@@ -37,3 +37,11 @@ venv/
 *.pth
 *.pt
 *.bin
+
+# Satellite & NWP Data Cache
+data_cache/
+*.bz2
+*.DAT
+*.nc
+*.grib2
+

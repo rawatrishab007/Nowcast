@@ -1,16 +1,140 @@
 // ============================================================
-// WeatherNow AI — Centralized TypeScript Domain Types
+// WeatherNow AI / SIH26084 — Canonical Multi-Model Type Definitions
+// V4 Rainfall, V3 Convective Cloud, V1 Severe Weather Proxies
 // ============================================================
 
-export type Page =
-  | 'dashboard'
-  | 'nowcast'
-  | 'weather-map'
-  | 'history'
-  | 'alerts'
-  | 'model-insights'
-  | 'settings'
-  | 'reports';
+export type HazardType =
+  | 'rain'
+  | 'rain_probability'
+  | 'convective_cloud'
+  | 'lightning'
+  | 'thunderstorm'
+  | 'hail'
+  | 'cloudburst'
+  | 'downburst';
+
+export interface GridMetadata {
+  lat_min: number;
+  lat_max: number;
+  lon_min: number;
+  lon_max: number;
+  height: number;
+  width: number;
+}
+
+export interface HazardLayerData {
+  map: number[][]; // 128x128 grid
+  unit: string;
+  method: string;
+  description?: string;
+  mean?: number;
+  max?: number;
+  min?: number;
+}
+
+export interface UnifiedHorizonForecast {
+  horizon_minutes: number;
+  target_time?: string;
+  rain: HazardLayerData;
+  rain_probability: HazardLayerData;
+  convective_cloud: HazardLayerData;
+  lightning: HazardLayerData;
+  thunderstorm: HazardLayerData;
+  hail: HazardLayerData;
+  cloudburst: HazardLayerData;
+  downburst: HazardLayerData;
+}
+
+export interface UnifiedNowcastResponse {
+  status: string;
+  data_mode: 'live' | 'validation_sample' | 'custom_input';
+  base_time: string;
+  forecast_horizons: number[];
+  grid_metadata: GridMetadata;
+  channels: string[];
+  models: {
+    rain: string;
+    convective_cloud: string;
+    hazards: string;
+  };
+  horizons: Record<string, UnifiedHorizonForecast>; // '30', '60', '90', '120'
+  provenance?: {
+    data_source?: string;
+    synthetic_data_used?: boolean;
+    base_time?: string;
+    target_times?: Record<string, string>;
+    observation_cadence?: string;
+    frame_timestamps?: string[];
+    channel_order?: string[];
+    grid_dimensions?: { height: number; width: number; channels: number; frames: number };
+    atmospheric_observations?: {
+      domain_summary?: Record<string, any>;
+      [key: string]: any;
+    };
+    performance?: {
+      acquisition_latency_ms?: number;
+      normalization_latency_ms?: number;
+      inference_latency_ms?: number;
+      total_latency_ms?: number;
+      device?: string;
+    };
+    models?: Record<string, string>;
+    [key: string]: any;
+  };
+}
+
+// Legacy V3 response support for backward compatibility
+export interface HorizonMap {
+  horizon_minutes: number;
+  target_time?: string;
+  unit: string;
+  height: number;
+  width: number;
+  map: number[][];
+  mean: number;
+  max: number;
+  min: number;
+}
+
+export interface PredictResponse {
+  status: string;
+  model: string;
+  data_mode: 'live' | 'validation_sample' | 'custom_input';
+  target: string;
+  semantics: string;
+  unit: string;
+  base_time: string;
+  forecast_horizons: number[];
+  grid_metadata: GridMetadata;
+  horizons: Record<string, HorizonMap>;
+  channels: string[];
+  provenance?: Record<string, any>;
+}
+
+export interface HealthResponse {
+  status: string;
+  model_loaded: boolean;
+  device?: string;
+  model_name?: string;
+  checkpoint?: string;
+  message?: string;
+  models_status?: Record<string, boolean>;
+}
+
+export interface ModelInfoResponse {
+  model: string;
+  version: string;
+  parameter_count: number;
+  input_channels: number;
+  input_frames: number;
+  frame_interval_minutes: number;
+  forecast_horizons: number[];
+  resolution: string;
+  domain: string;
+  target: string;
+  output_type: string;
+  channels: string[];
+}
 
 export interface WeatherLocation {
   id: string;
@@ -18,125 +142,6 @@ export interface WeatherLocation {
   state: string;
   lat: number;
   lng: number;
-  elevation: number;
-}
-
-export type WeatherCondition =
-  | 'Clear'
-  | 'Partly Cloudy'
-  | 'Cloudy'
-  | 'Light Rain'
-  | 'Moderate Rain'
-  | 'Heavy Rain'
-  | 'Thunderstorm'
-  | 'Fog'
-  | 'Haze';
-
-export interface CurrentWeather {
-  locationId: string;
-  timestamp: string;
-  temperature: number;
-  feelsLike: number;
-  humidity: number;
-  rainfall: number;
-  windSpeed: number;
-  windDirection: string;
-  condition: WeatherCondition;
-  visibility: number;
-  pressure: number;
-  dewPoint: number;
-  uvIndex: number;
-}
-
-// Historical observation point (-60m, -45m, -30m, -15m, NOW)
-export interface WeatherObservation {
-  minutesAgo: number;
-  label: string; // e.g. "-60 min", "Now"
-  timestamp: string;
-  rainfall: number; // mm/hr
-  temperature: number; // °C
-  humidity: number; // %
-  windSpeed: number; // km/h
-  pressure: number; // hPa
-  condition: WeatherCondition;
-}
-
-// Model prediction step (NOW, +15m, +30m, +45m, +60m, +90m, +120m)
-export interface WeatherPredictionStep {
-  minutesAhead: number; // 0 = now, 15, 30, 45, 60, 90, 120
-  label: string; // "Now", "+15 min", etc.
-  rainfall: number; // mm/hr (predicted)
-  lowerBound: number; // lower confidence bound
-  upperBound: number; // upper confidence bound
-  confidence: number; // 0–100 %
-  temperature: number; // °C
-  windSpeed: number; // km/h
-  humidity: number; // %
-  condition: WeatherCondition;
-}
-
-// Complete nowcast payload combining separate historical observations & model predictions
-export interface NowcastPrediction {
-  locationId: string;
-  modelRunTime: string;
-  predictionHorizonMin: number;
-  observations: WeatherObservation[]; // Past observed data
-  predictions: WeatherPredictionStep[]; // Future predicted data
-}
-
-export interface WeatherHistoryPoint {
-  timestamp: string;
-  time: string;
-  rainfall: number;
-  temperature: number;
-  humidity: number;
-  windSpeed: number;
-  pressure: number;
-}
-
-export type AlertSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
-export type AlertStatus = 'Active' | 'Resolved' | 'Monitoring';
-
-export interface WeatherAlert {
-  id: string;
-  severity: AlertSeverity;
-  title: string;
-  description: string;
-  locationId: string;
-  locationName: string;
-  timestamp: string;
-  updatedAt: string;
-  predictionHorizon: string;
-  status: AlertStatus;
-  icon: string;
-  parameterTriggered: string;
-}
-
-export interface ModelInsights {
-  modelName: string;
-  modelVersion: string;
-  status: 'Active' | 'Idle' | 'Error';
-  predictionHorizonMin: number;
-  lastInferenceTime: string;
-  inferenceLatencyMs: number;
-  averageConfidence: number;
-  observationsUsed: number;
-  inputDataTimestamp: string;
-  dataFreshnessMin: number;
-  radarDataAvailable: boolean;
-  satelliteDataAvailable: boolean;
-  groundStationCount: number;
-}
-
-export interface WeatherMapPoint {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  rainfall: number;
-  intensity: 'None' | 'Light' | 'Moderate' | 'Heavy' | 'Extreme';
-  temperature: number;
-  windSpeed: number;
-  condition: WeatherCondition;
-  alertLevel: AlertSeverity | 'None';
+  elevation?: number;
+  isCustom?: boolean;
 }

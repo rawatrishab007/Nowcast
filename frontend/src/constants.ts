@@ -1,32 +1,38 @@
-import type { Page } from './types/weather';
-export { LOCATIONS } from './data/mockData';
+// ============================================================
+// WeatherNow AI — Meteorological Constants & Monitoring Stations
+// ============================================================
 
-export const PAGE_ID_DASHBOARD: Page = 'dashboard';
-export const PAGE_ID_NOWCAST: Page = 'nowcast';
-export const PAGE_ID_WEATHER_MAP: Page = 'weather-map';
-export const PAGE_ID_HISTORY: Page = 'history';
-export const PAGE_ID_ALERTS: Page = 'alerts';
-export const PAGE_ID_MODEL_INSIGHTS: Page = 'model-insights';
-export const PAGE_ID_SETTINGS: Page = 'settings';
-export const PAGE_ID_REPORTS: Page = 'reports';
+import type { WeatherLocation } from './types/weather';
 
-// Severity color definitions
-export const SEVERITY_COLORS = {
-  Critical: { bg: 'bg-red-900', text: 'text-red-200', border: 'border-red-700', dot: 'bg-red-500' },
-  High:     { bg: 'bg-orange-900', text: 'text-orange-200', border: 'border-orange-700', dot: 'bg-orange-500' },
-  Medium:   { bg: 'bg-yellow-900', text: 'text-yellow-200', border: 'border-yellow-700', dot: 'bg-yellow-500' },
-  Low:      { bg: 'bg-blue-900', text: 'text-blue-200', border: 'border-blue-700', dot: 'bg-blue-500' },
-  None:     { bg: 'bg-green-900', text: 'text-green-200', border: 'border-green-700', dot: 'bg-green-500' },
-} as const;
+export const LOCATIONS: WeatherLocation[] = [
+  { id: 'dehradun', name: 'Dehradun', state: 'Uttarakhand', lat: 30.3165, lng: 78.0322, elevation: 640 },
+  { id: 'delhi', name: 'Delhi', state: 'National Capital Territory', lat: 28.6139, lng: 77.2090, elevation: 216 },
+  { id: 'mumbai', name: 'Mumbai', state: 'Maharashtra', lat: 19.0760, lng: 72.8777, elevation: 14 },
+  { id: 'kolkata', name: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639, elevation: 9 },
+  { id: 'bengaluru', name: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lng: 77.5946, elevation: 920 },
+  { id: 'chennai', name: 'Chennai', state: 'Tamil Nadu', lat: 13.0827, lng: 80.2707, elevation: 6 },
+  { id: 'hyderabad', name: 'Hyderabad', state: 'Telangana', lat: 17.3850, lng: 78.4867, elevation: 505 },
+  { id: 'guwahati', name: 'Guwahati', state: 'Assam', lat: 26.1445, lng: 91.7362, elevation: 55 },
+  { id: 'pune', name: 'Pune', state: 'Maharashtra', lat: 18.5204, lng: 73.8567, elevation: 560 },
+  { id: 'bhubaneswar', name: 'Bhubaneswar', state: 'Odisha', lat: 20.2961, lng: 85.8245, elevation: 45 },
+  { id: 'patna', name: 'Patna', state: 'Bihar', lat: 25.5941, lng: 85.1376, elevation: 53 },
+  { id: 'jaipur', name: 'Jaipur', state: 'Rajasthan', lat: 26.9124, lng: 75.7873, elevation: 431 },
+];
 
-export const CONDITION_ICONS: Record<string, string> = {
-  'Clear': '☀️',
-  'Partly Cloudy': '⛅',
-  'Cloudy': '☁️',
-  'Light Rain': '🌦️',
-  'Moderate Rain': '🌧️',
-  'Heavy Rain': '⛈️',
-  'Thunderstorm': '🌩️',
-  'Fog': '🌫️',
-  'Haze': '🌁',
+export const SPATIAL_BOUNDS = {
+  minLat: 8.0,
+  maxLat: 38.0,
+  minLng: 68.0,
+  maxLng: 98.0,
+  height: 128,
+  width: 128,
+};
+
+export const FORECAST_HORIZONS = [30, 60, 90, 120] as const;
+
+export const PROBABILITY_THRESHOLDS = {
+  CRITICAL: 0.80,
+  HIGH: 0.60,
+  MODERATE: 0.40,
+  LOW: 0.20,
 };
