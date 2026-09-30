@@ -1,38 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WeatherNow AI — Weather Nowcasting &amp; Early Warning System</title>
-    <meta name="description" content="AI-Powered Weather Nowcasting and Early Warning Dashboard for short-term weather prediction and decision support." />
+    <title>Megh Setu — Convective Weather Nowcasting &amp; Early Warning System</title>
+    <meta name="description" content="Megh Setu AI-Powered Convective Weather Nowcasting and Early Warning Decision Support Platform for India." />
     
+    <!-- Google Fonts: Montserrat, Plus Jakarta Sans, JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:ital,wght@0,500;0,600;0,700;0,800;0,900;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
-              'gray-900': '#1a202c',
-              'gray-800': '#2d3748',
-              'gray-700': '#4a5568',
-              'gray-600': '#718096',
-              'gray-500': '#a0aec0',
-              'gray-400': '#cbd5e0',
-              'teal-500': '#38b2ac',
-              'teal-600': '#319795',
+              brand: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                200: '#bfdbfe',
+                300: '#93c5fd',
+                400: '#60a5fa',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+                800: '#1e40af',
+                900: '#1e3a8a',
+              },
+              chatgpt: {
+                bg: '#181818',
+                surface: '#212121',
+                card: '#2A2A2A',
+                cardHover: '#303030',
+                border: '#383838',
+                borderLight: '#444444',
+                textPrimary: '#F5F5F5',
+                textSecondary: '#BDBDBD',
+                textMuted: '#737373',
+              }
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              heading: ['Montserrat', 'system-ui', 'sans-serif'],
+              sans: ['Plus Jakarta Sans', 'Montserrat', 'system-ui', 'sans-serif'],
+              mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
             },
+            boxShadow: {
+              'chat-card': '0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+              'chat-card-hover': '0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.14)',
+              'chat-inset': 'inset 1px 1px 4px rgba(0, 0, 0, 0.5)',
+            },
+            borderRadius: {
+              '2xl': '1rem',
+              '3xl': '1.5rem',
+              '4xl': '2rem',
+            }
           },
         },
       }
     </script>
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   </head>
-  <body class="bg-gray-900 text-gray-300 font-sans">
+  <body class="bg-[#181818] text-[#F5F5F5] font-sans antialiased min-h-screen selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>

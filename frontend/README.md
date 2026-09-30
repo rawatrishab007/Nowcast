@@ -1,15 +1,16 @@
-# WeatherNow AI — Frontend Dashboard
+# Megh Setu — Frontend Web Dashboard
 
-**WeatherNow AI** is an AI-powered Weather Nowcasting and Early Warning System dashboard designed for real-time monitoring and short-term weather prediction (0–120 minutes).
+**Megh Setu** frontend is a high-performance, responsive web application for real-time convective nowcasting (0–120 minutes) across the Indian subcontinent.
 
 ---
 
 ## 🛠️ Technology Stack
-- **Framework**: React 19 + TypeScript + Vite
-- **Styling**: Tailwind CSS (Dark Dashboard Theme)
-- **Charts**: Recharts (Observed vs Predicted time-series with confidence bounds)
-- **Map Layer**: Leaflet (NPM package `leaflet` with dark, satellite, terrain tiles)
-- **Icons**: Custom Weather SVG suite & Emoji tokens
+
+* **Framework**: React 19 + TypeScript + Vite
+* **Styling**: Tailwind CSS (ChatGPT-Style Neutral Dark Theme with White Situation Report Document Mode)
+* **Map Layer**: Leaflet (`react-leaflet` with custom Canvas colormap renderers and bilinear interpolation)
+* **Visuals**: Responsive SVG charts & JetBrains Mono / Montserrat typography
+* **API Client**: Axios with automated retry and error code propagation
 
 ---
 
@@ -18,24 +19,40 @@
 ```
 frontend/
 ├── public/
-│   └── favicon.svg           # WeatherNow AI SVG icon
+│   └── favicon.svg           # Megh Setu application icon
 ├── src/
 │   ├── components/
-│   │   ├── common/           # Card, Page, Navigation, NavIcons
-│   │   ├── charts/           # PredictionChart (Observed vs Predicted + Bounds)
-│   │   └── map/              # WeatherMap (Leaflet npm layer)
-│   ├── pages/                # Dashboard, Nowcast, WeatherMap, History, Alerts, ModelInsights, Settings, Reports
-│   ├── services/             # weatherApi.ts (API Adapter & Mock Fallback)
-│   ├── data/                 # mockData.ts (Centralized mock datasets)
-│   ├── types/                # weather.ts (Shared domain TypeScript types)
-│   ├── App.tsx               # Main routing shell
-│   ├── index.tsx             # Entry point
-│   └── constants.ts          # Constants & color tokens
-├── package.json              # Package name: "weathernow-ai"
-├── index.html                # Page entry with metadata
-├── vite.config.ts            # Vite build configuration
-├── .env.example              # API & Mock mode environment configuration
-└── README.md                 # Frontend documentation
+│   │   ├── Header.tsx                    # Top navigation & operational status
+│   │   ├── MapView.tsx                   # High-resolution Leaflet map layer
+│   │   ├── PredictionControls.tsx        # Hazard layer & horizon selector
+│   │   ├── ScenarioReplayControls.tsx    # Horizon scrubber timeline
+│   │   ├── LocationInspector.tsx         # Station & probe grid cell inspector
+│   │   ├── LocationRiskCard.tsx          # Point risk outputs & severe proxies
+│   │   ├── AlertEngineCard.tsx           # Rule-based decision-support alert engine
+│   │   ├── ForecastTrendChart.tsx        # SVG multi-horizon trend series
+│   │   ├── OperationalIntegrationCard.tsx# Live ingestion health rows
+│   │   ├── DataHealthMonitor.tsx         # Latency, model status & diagnostics
+│   │   ├── SituationReportModal.tsx      # Formal printable white-background SitRep
+│   │   ├── SummaryMetricCards.tsx        # 4-card overview metrics grid
+│   │   ├── LoadingState.tsx              # Ingestion & model loading overlay
+│   │   └── ErrorState.tsx                # Operational warning banner
+│   ├── services/
+│   │   └── api.ts                        # Centralized Axios API client
+│   ├── types/
+│   │   └── weather.ts                    # TypeScript domain interfaces
+│   ├── utils/
+│   │   ├── alertEngine.ts                # Rule-based meteorological threshold engine
+│   │   ├── exportUtils.ts                # CSV & JSON 4-horizon data exporters
+│   │   ├── geocoding.ts                  # Reverse geocoding utility
+│   │   └── timeUtils.ts                  # IST (UTC+05:30) date & time formatters
+│   ├── App.tsx                           # Main workspace shell & state manager
+│   ├── constants.ts                      # Station catalog & bounding box coordinates
+│   ├── index.css                         # Tailwind CSS & custom styling rules
+│   └── index.tsx                         # Application React DOM root
+├── package.json                          # Package configuration
+├── index.html                            # HTML entry point & metadata
+├── vite.config.ts                        # Vite build configuration
+└── .env.example                          # Environment template
 ```
 
 ---
@@ -44,7 +61,6 @@ frontend/
 
 ### 1. Install Dependencies
 ```bash
-cd frontend
 npm install
 ```
 
@@ -52,33 +68,10 @@ npm install
 ```bash
 npm run dev
 ```
-Open `http://localhost:5173` (or `http://localhost:5174`) in your browser.
+Dashboard available at: `http://localhost:5173`
 
 ### 3. Build for Production
 ```bash
 npm run build
 ```
-Generates production bundle in `frontend/dist/`.
-
----
-
-## 🔌 ML Backend Integration (For ML Team)
-
-All UI data fetching flows through a single adapter file:
-`frontend/src/services/weatherApi.ts`
-
-### Steps to connect the live ML model backend:
-1. Create `.env` inside `frontend/`:
-   ```env
-   VITE_API_BASE_URL=http://your-backend-host:8000/api
-   VITE_USE_MOCK_DATA=false
-   ```
-2. Ensure your backend exposes endpoints such as:
-   - `GET /weather/current?location={id}`
-   - `GET /weather/nowcast?location={id}`
-   - `GET /weather/history?location={id}&hours={hours}`
-   - `GET /weather/alerts`
-   - `GET /model/status`
-   - `GET /weather/map?time={minutesAhead}`
-   - `POST /weather/predict`
-3. The adapter layer in `weatherApi.ts` automatically switches to live HTTP requests when `VITE_USE_MOCK_DATA=false`.
+Generates production bundle in `dist/`.

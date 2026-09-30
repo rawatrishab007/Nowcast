@@ -83,32 +83,37 @@ export interface UnifiedNowcastResponse {
   };
 }
 
-// Legacy V3 response support for backward compatibility
-export interface HorizonMap {
-  horizon_minutes: number;
-  target_time?: string;
-  unit: string;
-  height: number;
-  width: number;
-  map: number[][];
-  mean: number;
-  max: number;
-  min: number;
+export interface DecisionSupportAlert {
+  id: string;
+  category: string;
+  indicator_title: string;
+  severity_level: 'advisory' | 'elevated' | 'high' | 'critical';
+  trigger_rule: string;
+  description: string;
+  lead_time_min: number;
+  source_model: string;
+  scientific_disclaimer?: string;
 }
 
-export interface PredictResponse {
+export interface PipelineHealthResponse {
   status: string;
-  model: string;
-  data_mode: 'live' | 'validation_sample' | 'custom_input';
-  target: string;
-  semantics: string;
-  unit: string;
-  base_time: string;
-  forecast_horizons: number[];
-  grid_metadata: GridMetadata;
-  horizons: Record<string, HorizonMap>;
-  channels: string[];
-  provenance?: Record<string, any>;
+  himawari_status: 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE';
+  gfs_status: 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE';
+  temporal_alignment: 'VALID' | 'INVALID';
+  input_tensor: 'VALID' | 'INVALID';
+  model_v1_status: 'LOADED' | 'ERROR';
+  model_v3_status: 'LOADED' | 'ERROR';
+  model_v4_status: 'LOADED' | 'ERROR';
+  last_data_timestamp?: string | null;
+  forecast_generated_at?: string | null;
+  forecast_valid_range?: { start: string; end: string } | null;
+  latencies_ms?: {
+    acquisition_latency_ms?: number;
+    inference_latency_ms?: number;
+    total_latency_ms?: number;
+  } | null;
+  device?: string;
+  message?: string;
 }
 
 export interface HealthResponse {
@@ -144,4 +149,33 @@ export interface WeatherLocation {
   lng: number;
   elevation?: number;
   isCustom?: boolean;
+  isLoadingName?: boolean;
+}
+
+// Legacy V3 response support
+export interface HorizonMap {
+  horizon_minutes: number;
+  target_time?: string;
+  unit: string;
+  height: number;
+  width: number;
+  map: number[][];
+  mean: number;
+  max: number;
+  min: number;
+}
+
+export interface PredictResponse {
+  status: string;
+  model: string;
+  data_mode: 'live' | 'validation_sample' | 'custom_input';
+  target: string;
+  semantics: string;
+  unit: string;
+  base_time: string;
+  forecast_horizons: number[];
+  grid_metadata: GridMetadata;
+  horizons: Record<string, HorizonMap>;
+  channels: string[];
+  provenance?: Record<string, any>;
 }

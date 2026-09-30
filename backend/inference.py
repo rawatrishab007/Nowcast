@@ -243,7 +243,7 @@ def run_unified_nowcast_inference(
         models={
             "rain": "SIHV4RainfallNowcast (V4)",
             "convective_cloud": "SIHV3Nowcast (V3)",
-            "hazards": "V1 Physics-Informed Proxy Engine",
+            "hazards": "V1 Severe Weather Hazard Assessment",
         },
         horizons=horizons_dict,
         provenance=prov,

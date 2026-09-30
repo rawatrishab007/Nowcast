@@ -234,6 +234,7 @@ class LivePredictionService:
                 unit="Probability [0.0 - 1.0]",
                 base_time=base_time_str,
                 forecast_horizons=settings.FORECAST_HORIZONS,
+                target_times=target_times,
                 grid_metadata=GridMetadata(
                     lat_min=8.0,
                     lat_max=38.0,
@@ -364,12 +365,16 @@ class LivePredictionService:
                     "atmospheric_observations": atmospheric_observations,
                     "performance": {
                         "acquisition_latency_ms": round((t_acq_end - t_acq_start) * 1000, 2),
-                        "inference_latency_ms": round((time.perf_counter() - t_infer_start) * 1000, 2),
-                        "total_latency_ms": round((time.perf_counter() - t_start) * 1000, 2),
                         "device": str(device),
                     },
                 }
             )
+            t_infer_end = time.perf_counter()
+            infer_ms = round((t_infer_end - t_infer_start) * 1000, 2)
+            total_ms = round((t_infer_end - t_start) * 1000, 2)
+            if response.provenance and "performance" in response.provenance:
+                response.provenance["performance"]["inference_latency_ms"] = infer_ms
+                response.provenance["performance"]["total_latency_ms"] = total_ms
 
             self._last_unified_prediction = response
             self._last_unified_base_time = base_time_str

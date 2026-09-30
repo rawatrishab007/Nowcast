@@ -1,6 +1,5 @@
 // ============================================================
-// WeatherNow AI — Station & Point Inspector Component
-// Multi-Model Hazard Inspection at Inspected Coordinate [r, c]
+// WeatherNow AI — Strict Black + Blue + White Location Inspector
 // ============================================================
 
 import React from 'react';
@@ -69,12 +68,14 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
   });
 
   return (
-    <div className="bg-gray-800/80 border border-gray-700/80 rounded-xl p-4 shadow-lg space-y-3.5 text-xs font-sans">
-      {/* Header with City Dropdown / Custom Probe Indicator */}
-      <div className="flex items-center justify-between border-b border-gray-700/80 pb-2.5">
+    <div className="dark-card p-4 sm:p-5 rounded-2xl space-y-4 shadow-lg border border-[#383838]">
+      {/* Header with Blue Heading & Station Dropdown */}
+      <div className="flex items-center justify-between border-b border-[#383838] pb-3">
         <div className="flex items-center gap-2">
-          <span className="text-base">📍</span>
-          <h3 className="font-bold text-white text-sm">Station Inspector</h3>
+          <span className="text-base">{selectedLocation.isCustom ? '🎯' : '📍'}</span>
+          <h3 className="font-bold text-blue-400 text-xs uppercase tracking-wider font-heading">
+            Location Inspector
+          </h3>
         </div>
 
         {/* Station Select */}
@@ -85,10 +86,10 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
             const loc = LOCATIONS.find((l) => l.id === e.target.value);
             if (loc) onLocationSelect(loc);
           }}
-          className="bg-gray-900 border border-gray-700 text-teal-300 text-xs font-mono font-semibold rounded-lg px-2.5 py-1 focus:outline-none focus:border-teal-500 cursor-pointer max-w-[180px] truncate"
+          className="bg-[#212121] border border-[#383838] text-white text-xs font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[180px] truncate shadow-inner"
         >
           {selectedLocation.isCustom && (
-            <option value="custom">Custom Map Point</option>
+            <option value="custom">📍 Probe: {selectedLocation.name}</option>
           )}
           {LOCATIONS.map((loc) => (
             <option key={loc.id} value={loc.id}>
@@ -99,41 +100,55 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
       </div>
 
       {/* Selected Geographic Coordinates & Grid Mapping */}
-      <div className="flex items-center justify-between bg-gray-900/60 p-2.5 rounded-lg border border-gray-700/60 font-mono text-[11px]">
+      <div className="flex items-center justify-between bg-[#212121] p-3 rounded-xl border border-[#383838] text-xs">
         <div>
-          <span className="text-gray-400 text-[10px] block">Inspected Location:</span>
-          <span className="text-white font-semibold">
-            {selectedLocation.name}
-            {selectedLocation.state ? ` (${selectedLocation.state})` : ''}
+          <span className="text-blue-400 text-[10px] font-bold uppercase tracking-wider block font-heading">
+            Inspected Point
           </span>
-          <span className="text-gray-400 text-[10px] block mt-0.5">
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-white font-bold text-sm truncate max-w-[180px] font-heading">
+              {selectedLocation.name}
+            </span>
+            {selectedLocation.isLoadingName && (
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin inline-block" title="Resolving..." />
+            )}
+          </div>
+          {selectedLocation.state && (
+            <div className="text-[11px] text-blue-300 font-semibold truncate max-w-[180px]">
+              {selectedLocation.state}
+            </div>
+          )}
+          <span className="text-neutral-400 text-[11px] font-mono block mt-0.5">
             {selectedLocation.lat.toFixed(3)}°N, {selectedLocation.lng.toFixed(3)}°E
           </span>
         </div>
         <div className="text-right">
-          <span className="text-gray-400 text-[10px] block">128×128 Grid Cell:</span>
-          <span className="text-teal-300 font-semibold block mt-0.5">
+          <span className="text-blue-400 text-[10px] font-bold uppercase tracking-wider block font-heading">
+            AI Grid Cell
+          </span>
+          <span className="text-white font-bold font-mono text-sm block mt-0.5">
             [{row}, {col}]
           </span>
+          <span className="text-[10px] text-neutral-400">128×128 (60km)</span>
         </div>
       </div>
 
       {/* Active Hazard Value Display */}
-      <div className="bg-gray-900/90 border border-teal-900/80 p-3 rounded-lg flex items-center justify-between">
+      <div className="bg-[#212121] border border-[#383838] p-3.5 rounded-xl flex items-center justify-between">
         <div>
-          <span className="text-gray-400 text-[10px] block font-mono">
+          <span className="text-neutral-300 text-xs font-semibold block">
             {activeHzCfg.icon} {activeHzCfg.label} (+{selectedHorizon}m):
           </span>
-          <span className="text-2xl font-black font-mono text-teal-400">
+          <span className="text-2xl font-black font-mono text-white mt-0.5 block tracking-tight font-heading">
             {selectedHazard === 'rain'
               ? `${activeVal.toFixed(2)} mm/hr`
               : selectedHazard === 'rain_probability' || selectedHazard === 'convective_cloud'
               ? `${(activeVal * 100).toFixed(1)}%`
-              : `${activeVal.toFixed(3)} (score)`}
+              : `${activeVal.toFixed(3)}`}
           </span>
         </div>
-        <div className="text-right font-mono">
-          <span className="text-[10px] text-gray-400 border border-gray-700 px-2 py-1 rounded bg-gray-800 block">
+        <div className="text-right">
+          <span className="text-[10px] font-bold text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-full bg-[#181818] block uppercase tracking-wider">
             {activeHzCfg.modelBadge}
           </span>
         </div>
@@ -141,7 +156,7 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
 
       {/* Active Hazard Forecast Across Horizons */}
       <div>
-        <span className="text-gray-400 text-[10px] uppercase tracking-wider font-mono font-bold block mb-1.5">
+        <span className="text-blue-400 text-[11px] uppercase tracking-wider font-bold block mb-2 font-heading">
           {activeHzCfg.shortLabel} Timeline (+30 to +120m):
         </span>
         <div className="grid grid-cols-4 gap-2 font-mono">
@@ -150,24 +165,20 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
             return (
               <div
                 key={v.horizon}
-                className={`p-2 rounded-lg border text-center transition-all ${
+                className={`p-2 rounded-xl text-center transition-all ${
                   isSelected
-                    ? 'bg-teal-950/80 border-teal-500 shadow-md ring-1 ring-teal-500/50'
-                    : 'bg-gray-900/70 border-gray-700/60'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400'
+                    : 'bg-[#212121] border border-[#383838] text-neutral-300 hover:border-neutral-500'
                 }`}
               >
-                <span className="text-[10px] text-gray-400 block font-semibold">
+                <span className={`text-[10px] block font-bold ${isSelected ? 'text-blue-100' : 'text-neutral-400'}`}>
                   +{v.horizon}m
                 </span>
-                <span
-                  className={`text-xs font-bold block mt-0.5 ${
-                    isSelected ? 'text-teal-300' : 'text-gray-200'
-                  }`}
-                >
+                <span className="text-xs font-black block mt-0.5 text-white">
                   {selectedHazard === 'rain'
-                    ? `${v.val.toFixed(2)}`
+                    ? `${v.val.toFixed(1)}`
                     : selectedHazard === 'rain_probability' || selectedHazard === 'convective_cloud'
-                    ? `${(v.val * 100).toFixed(1)}%`
+                    ? `${(v.val * 100).toFixed(0)}%`
                     : v.val.toFixed(2)}
                 </span>
               </div>
@@ -178,22 +189,22 @@ export const LocationInspector: React.FC<LocationInspectorProps> = ({
 
       {/* 8-Hazard Multi-Model Summary Matrix */}
       <div>
-        <span className="text-gray-400 text-[10px] uppercase tracking-wider font-mono font-bold block mb-1.5">
-          Multi-Hazard Matrix (+{selectedHorizon}m):
+        <span className="text-blue-400 text-[11px] uppercase tracking-wider font-bold block mb-2 font-heading">
+          8-Hazard Risk Matrix (+{selectedHorizon}m):
         </span>
-        <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+        <div className="grid grid-cols-2 gap-2 text-xs">
           {allHazardsSummary.map((h) => (
             <div
               key={h.key}
-              className="bg-gray-900/80 border border-gray-700/60 p-1.5 rounded flex items-center justify-between"
+              className="bg-[#212121] border border-[#383838] p-2 rounded-xl flex items-center justify-between hover:border-neutral-500 transition-all"
             >
-              <div className="flex items-center gap-1 truncate">
-                <span>{h.icon}</span>
-                <span className="text-gray-300 font-semibold truncate">{h.shortLabel}:</span>
+              <div className="flex items-center gap-1.5 truncate">
+                <span className="text-sm">{h.icon}</span>
+                <span className="text-neutral-300 font-semibold truncate text-[11px]">{h.shortLabel}:</span>
               </div>
-              <span className="text-teal-300 font-bold ml-1">
+              <span className="text-white font-bold font-mono text-[11px] ml-1">
                 {h.key === 'rain'
-                  ? `${h.val.toFixed(2)} mm`
+                  ? `${h.val.toFixed(1)} mm`
                   : h.key === 'rain_probability' || h.key === 'convective_cloud'
                   ? `${(h.val * 100).toFixed(0)}%`
                   : h.val.toFixed(2)}

@@ -6,6 +6,7 @@ import type {
   PredictResponse,
   UnifiedNowcastResponse,
   HealthResponse,
+  PipelineHealthResponse,
   ModelInfoResponse,
 } from '../types/weather';
 
@@ -173,7 +174,27 @@ export async function getLivePrediction(forceRefresh: boolean = false): Promise<
   return inFlightPrediction;
 }
 
-// 5. Demo Prediction on Stored Validation Sample
+// 5. Operational Ingestion Pipeline Health Check
+export async function getPipelineHealth(): Promise<PipelineHealthResponse> {
+  try {
+    return await fetchJson<PipelineHealthResponse>('/health/pipeline');
+  } catch (err: any) {
+    return {
+      status: 'error',
+      himawari_status: 'UNAVAILABLE',
+      gfs_status: 'UNAVAILABLE',
+      temporal_alignment: 'INVALID',
+      input_tensor: 'INVALID',
+      model_v1_status: 'ERROR',
+      model_v3_status: 'ERROR',
+      model_v4_status: 'ERROR',
+      message: err?.message || 'Pipeline health endpoint unreachable',
+    };
+  }
+}
+
+// 6. Demo Prediction on Stored Validation Sample
 export async function getDemoPrediction(): Promise<PredictResponse> {
   return fetchJson<PredictResponse>('/predict/demo');
 }
+

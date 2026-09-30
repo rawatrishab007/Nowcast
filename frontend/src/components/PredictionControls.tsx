@@ -1,5 +1,5 @@
 // ============================================================
-// WeatherNow AI — Multi-Model Hazard & Horizon Prediction Controls
+// WeatherNow AI — ChatGPT-Style Neutral Dark Hazard & Horizon Controls
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -60,8 +60,8 @@ export const HAZARD_CONFIG: Record<
     icon: '⚡',
     category: 'proxy',
     unit: 'Risk Score [0,1]',
-    modelBadge: 'V1 Physics Proxy',
-    description: 'Physics-informed proxy from CAPE, B13, and wind shear',
+    modelBadge: 'V1 Severe Weather',
+    description: 'Hazard assessment from CAPE, B13, and wind shear',
   },
   thunderstorm: {
     label: 'Thunderstorm',
@@ -69,8 +69,8 @@ export const HAZARD_CONFIG: Record<
     icon: '⛈️',
     category: 'proxy',
     unit: 'Risk Score [0,1]',
-    modelBadge: 'V1 Physics Proxy',
-    description: 'Physics-informed proxy from CAPE × Deep Convection Index',
+    modelBadge: 'V1 Severe Weather',
+    description: 'Hazard assessment from CAPE × Deep Convection Index',
   },
   hail: {
     label: 'Hail Risk',
@@ -78,8 +78,8 @@ export const HAZARD_CONFIG: Record<
     icon: '🧊',
     category: 'proxy',
     unit: 'Risk Score [0,1]',
-    modelBadge: 'V1 Physics Proxy',
-    description: 'Physics-informed proxy from severe updraft & freezing levels',
+    modelBadge: 'V1 Severe Weather',
+    description: 'Hazard assessment from severe updraft & freezing levels',
   },
   cloudburst: {
     label: 'Cloudburst Risk',
@@ -87,8 +87,8 @@ export const HAZARD_CONFIG: Record<
     icon: '🌊',
     category: 'proxy',
     unit: 'Risk Score [0,1]',
-    modelBadge: 'V1 Experimental Proxy',
-    description: 'Experimental proxy from extreme moisture flux & instability',
+    modelBadge: 'V1 Severe Weather',
+    description: 'Hazard assessment from extreme moisture flux & instability',
   },
   downburst: {
     label: 'Downburst Risk',
@@ -96,8 +96,8 @@ export const HAZARD_CONFIG: Record<
     icon: '💨',
     category: 'proxy',
     unit: 'Risk Score [0,1]',
-    modelBadge: 'V1 Physics Proxy',
-    description: 'Physics-informed proxy from dry air entrainment & DCAPE',
+    modelBadge: 'V1 Severe Weather',
+    description: 'Hazard assessment from dry air entrainment & DCAPE',
   },
 };
 
@@ -128,22 +128,24 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
   const cfg = HAZARD_CONFIG[selectedHazard];
 
   return (
-    <div className="bg-gray-800/80 border border-gray-700/80 rounded-xl p-4 shadow-lg space-y-3.5">
-      {/* ── 1. Hazard Selection Tabs ── */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+    <div className="dark-card p-4 sm:p-5 rounded-2xl space-y-4">
+      {/* ── 1. Hazard Selection Header (Blue Heading) ── */}
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono">
-              Hazard Layer:
+            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider font-heading">
+              Hazard Outlook &amp; Layers:
             </span>
-            <span className="text-[11px] text-teal-400 font-mono font-semibold">
-              {cfg.icon} {cfg.label} ({cfg.modelBadge})
+            <span className="text-xs font-bold text-white bg-[#212121] px-2.5 py-1 rounded-full border border-[#383838] flex items-center gap-1.5 shadow-sm">
+              <span>{cfg.icon}</span>
+              <span>{cfg.label}</span>
+              <span className="text-blue-300 font-normal">({cfg.modelBadge})</span>
             </span>
           </div>
           {activeHazardLayer && (
-            <div className="text-[11px] font-mono text-gray-300">
-              Domain Max:{' '}
-              <span className="text-teal-300 font-bold">
+            <div className="text-xs font-medium text-[#BDBDBD] flex items-center gap-1.5">
+              <span>Domain Peak:</span>
+              <span className="text-white font-bold font-mono">
                 {activeHazardLayer.max} {activeHazardLayer.unit}
               </span>
             </div>
@@ -151,7 +153,7 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
         </div>
 
         {/* Hazard Buttons Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           {(Object.keys(HAZARD_CONFIG) as HazardType[]).map((hzKey) => {
             const isSelected = selectedHazard === hzKey;
             const hCfg = HAZARD_CONFIG[hzKey];
@@ -161,25 +163,27 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
               <button
                 key={hzKey}
                 onClick={() => onHazardSelect(hzKey)}
-                className={`px-2.5 py-2 rounded-lg text-left transition-all cursor-pointer border flex flex-col justify-between ${
+                className={`p-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? isNeural
-                      ? 'bg-teal-900/60 border-teal-500 text-white shadow-md shadow-teal-950/40 ring-1 ring-teal-500/50'
-                      : 'bg-amber-900/40 border-amber-500 text-white shadow-md shadow-amber-950/40 ring-1 ring-amber-500/50'
-                    : 'bg-gray-900/80 border-gray-700/80 text-gray-400 hover:text-gray-200 hover:bg-gray-800/80'
+                    ? 'bg-blue-600 text-white shadow-md border border-blue-400 transform scale-[1.02]'
+                    : 'bg-[#212121] hover:bg-[#2E2E2E] text-[#F5F5F5] border border-[#383838] hover:border-[#4F4F4F]'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-sm">{hCfg.icon}</span>
+                  <span className="text-base">{hCfg.icon}</span>
                   <span
-                    className={`text-[8px] font-mono uppercase px-1 rounded ${
-                      isNeural ? 'bg-teal-950 text-teal-300' : 'bg-gray-800 text-amber-300'
+                    className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#181818] text-blue-300 border border-[#383838]'
                     }`}
                   >
-                    {isNeural ? 'Neural' : 'Proxy'}
+                    {isNeural ? 'Neural' : 'Hazard'}
                   </span>
                 </div>
-                <div className="font-semibold text-[11px] mt-1 truncate">{hCfg.shortLabel}</div>
+                <div className={`font-bold text-xs mt-2 truncate ${isSelected ? 'text-white' : 'text-[#F5F5F5]'}`}>
+                  {hCfg.shortLabel}
+                </div>
               </button>
             );
           })}
@@ -187,14 +191,14 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
       </div>
 
       {/* ── 2. Lead Time Horizons & Animation Toggle ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t border-gray-700/60 gap-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono mr-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-[#383838] gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-xs font-bold text-blue-400 uppercase tracking-wider font-heading">
             Lead Time:
           </span>
 
           {/* Horizon Buttons */}
-          <div className="flex items-center gap-1.5 bg-gray-900/80 p-1 rounded-lg border border-gray-700">
+          <div className="flex items-center gap-1.5 bg-[#181818] p-1 rounded-xl border border-[#383838] shadow-inner">
             {FORECAST_HORIZONS.map((h) => {
               const isSelected = selectedHorizon === h;
               return (
@@ -204,13 +208,13 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
                     setIsPlaying(false);
                     onHorizonSelect(h);
                   }}
-                  className={`px-3 py-1 text-xs font-bold font-mono rounded-md transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 text-xs font-bold font-mono rounded-lg transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? 'bg-teal-600 text-white shadow-md'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-[#BDBDBD] hover:text-white hover:bg-[#2A2A2A]'
                   }`}
                 >
-                  +{h} min
+                  +{h}m
                 </button>
               );
             })}
@@ -219,21 +223,21 @@ export const PredictionControls: React.FC<PredictionControlsProps> = ({
           {/* Play/Pause Button */}
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            title={isPlaying ? 'Pause animation loop' : 'Play horizon animation loop'}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            title={isPlaying ? 'Pause horizon animation' : 'Loop through forecast horizons'}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
               isPlaying
-                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                ? 'bg-blue-600 text-white shadow-md animate-pulse'
+                : 'bg-[#212121] hover:bg-[#2E2E2E] text-blue-300 border border-[#383838]'
             }`}
           >
-            <span>{isPlaying ? '⏸ Pause' : '▶ Loop (30-120m)'}</span>
+            <span>{isPlaying ? '⏸ Pause' : '▶ Loop (+30 to +120m)'}</span>
           </button>
         </div>
 
-        {/* Active Target Time & Method Info */}
-        <div className="text-[11px] font-mono text-gray-400 flex items-center gap-2">
-          <span className="text-gray-500">Method:</span>
-          <span className="text-gray-300 font-semibold">{cfg.description}</span>
+        {/* Method Info */}
+        <div className="text-xs text-[#BDBDBD] flex items-center gap-1.5">
+          <span className="font-medium text-[#737373]">Method:</span>
+          <span className="font-semibold text-[#F5F5F5]">{cfg.description}</span>
         </div>
       </div>
     </div>

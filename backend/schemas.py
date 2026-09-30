@@ -99,6 +99,7 @@ class PredictResponse(BaseModel):
     unit: str = Field("Probability [0.0 - 1.0]", description="Unit of output probability grids")
     base_time: str = Field(..., description="Observation timestamp of the latest input frame (t0)")
     forecast_horizons: List[int] = Field([30, 60, 90, 120], description="Lead times in minutes")
+    target_times: Optional[Dict[str, str]] = Field(None, description="ISO timestamps of target horizons")
     grid_metadata: GridMetadata = Field(default_factory=GridMetadata)
     horizons: Dict[str, HorizonMap] = Field(..., description="Forecast maps keyed by minutes ahead: '30', '60', '90', '120'")
     channels: List[str] = Field(["B13", "t2m", "d2m", "u10", "v10", "cape", "cin", "tp"])
@@ -116,7 +117,12 @@ class HealthResponse(BaseModel):
 
 
 class ModelInfoResponse(BaseModel):
-    models: Dict[str, Dict[str, Any]]
+    model: Optional[str] = Field(None, description="Primary model name")
+    version: Optional[str] = Field(None, description="Model version")
+    parameter_count: Optional[int] = Field(None, description="Parameter count")
+    target: Optional[str] = Field(None, description="Target semantics")
+    output_type: Optional[str] = Field(None, description="Output type")
+    models: Optional[Dict[str, Any]] = Field(None, description="Multi-model specifications")
     input_channels: int
     input_frames: int
     frame_interval_minutes: int
@@ -126,6 +132,24 @@ class ModelInfoResponse(BaseModel):
     channels: List[str]
 
 
+class PipelineHealthResponse(BaseModel):
+    status: str = Field("ok", description="Overall health status")
+    himawari_status: str = Field("CONNECTED", description="Himawari-9 AHI connection state")
+    gfs_status: str = Field("CONNECTED", description="NOAA GFS NWP connection state")
+    temporal_alignment: str = Field("VALID", description="Temporal sequence alignment state")
+    input_tensor: str = Field("VALID", description="Atmospheric (1, 6, 8, 128, 128) tensor state")
+    model_v1_status: str = Field("LOADED", description="V1 Severe Hazard Proxy Engine state")
+    model_v3_status: str = Field("LOADED", description="V3 Convective Cloud ConvLSTM state")
+    model_v4_status: str = Field("LOADED", description="V4 Rainfall Nowcast ConvLSTM state")
+    last_data_timestamp: Optional[str] = Field(None, description="Observation timestamp of latest frame (t0)")
+    forecast_generated_at: Optional[str] = Field(None, description="Timestamp when nowcast inference completed")
+    forecast_valid_range: Optional[Dict[str, str]] = Field(None, description="Valid range (+30m to +120m)")
+    latencies_ms: Optional[Dict[str, Any]] = Field(None, description="Pipeline latency diagnostics")
+    device: str = Field("mps", description="PyTorch computation device")
+    message: Optional[str] = Field(None, description="Health summary message")
+
+
 class ErrorResponse(BaseModel):
     status: str = Field("error", description="Error status identifier")
     message: str = Field(..., description="Human-readable explanation of error")
+

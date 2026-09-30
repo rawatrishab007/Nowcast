@@ -10,6 +10,7 @@ import struct
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import httpx
 
@@ -258,18 +259,15 @@ class HimawariDownloader:
 
         # Indian domain (8N-38N) spans segments 2, 3, 4, 5 (lines 550 to 2750)
         target_segments = [2, 3, 4, 5]
-        segment_imgs = []
         calib_meta = None
         proj_meta = None
 
         logger.info(f"Retrieving Himawari-9 B13 scan for slot: {slot_prefix}")
 
-        for seg_idx in target_segments:
+        def _fetch_and_parse_segment(seg_idx: int) -> Tuple[int, Dict[str, Any], np.ndarray]:
             seg_filename = f"HS_H09_{dt_str}_B13_FLDK_R20_S{seg_idx:02d}10.DAT.bz2"
             local_path = os.path.join(self.cache_dir, seg_filename)
 
-            # Check cache or download
-            raw_bytes = None
             if os.path.exists(local_path) and os.path.getsize(local_path) > 1000:
                 with open(local_path, "rb") as f:
                     compressed = f.read()
@@ -290,24 +288,30 @@ class HimawariDownloader:
                         f"Live Himawari B13 network retrieval failed for {seg_filename}: {str(e)}"
                     ) from e
 
-            # Decompress BZ2
             try:
                 decompressed = bz2.decompress(compressed)
             except Exception as e:
                 raise DataValidationError(f"Failed to decompress HSD segment {seg_filename}: {str(e)}")
 
             meta, seg_counts = HimawariHSDParser.parse_hsd_segment(decompressed)
-            segment_imgs.append(seg_counts)
+            return seg_idx, meta, seg_counts
 
-            if calib_meta is None and meta.get('calibration'):
-                calib_meta = meta['calibration']
-            if proj_meta is None and meta.get('projection'):
-                proj_meta = meta['projection']
+        segment_results = {}
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(_fetch_and_parse_segment, s_idx) for s_idx in target_segments]
+            for future in futures:
+                seg_idx, meta, seg_counts = future.result()
+                segment_results[seg_idx] = (meta, seg_counts)
+                if calib_meta is None and meta.get('calibration'):
+                    calib_meta = meta['calibration']
+                if proj_meta is None and meta.get('projection'):
+                    proj_meta = meta['projection']
 
         if not calib_meta:
             raise DataValidationError("Missing calibration block in Himawari HSD stream.")
 
-        # Stitch segments vertically (Shape: 2200 lines x 5500 columns, lines 550 to 2750)
+        # Stitch segments vertically in order 2, 3, 4, 5
+        segment_imgs = [segment_results[s_idx][1] for s_idx in target_segments]
         stitched_counts = np.vstack(segment_imgs)
         line_offset = 550.0
 
@@ -415,31 +419,44 @@ class HimawariDownloader:
         if target_time is not None:
             scan_min = (target_time.minute // 10) * 10
             base_slot = target_time.replace(minute=scan_min, second=0, microsecond=0)
+            slots_to_try = [base_slot]
         else:
             # Operational satellite delay is typically ~20-30 minutes from real-time UTC
-            now_utc = datetime.now(timezone.utc) - timedelta(minutes=30)
-            scan_min = (now_utc.minute // 10) * 10
-            base_slot = now_utc.replace(minute=scan_min, second=0, microsecond=0)
+            now_utc = datetime.now(timezone.utc)
+            slots_to_try = []
+            for delay_mins in [20, 30, 40, 50, 60, 70, 80, 90]:
+                t = now_utc - timedelta(minutes=delay_mins)
+                s_min = (t.minute // 10) * 10
+                slot = t.replace(minute=s_min, second=0, microsecond=0)
+                if slot not in slots_to_try:
+                    slots_to_try.append(slot)
 
-        sequence = []
-        try:
-            for i in range(count):
-                slot_time = base_slot - timedelta(minutes=(count - 1 - i) * settings.FRAME_INTERVAL_MINUTES)
-                obs = self.fetch_b13_observation(slot_time)
-                sequence.append(obs)
-            return sequence
-        except HimawariUnavailableError:
-            # If tentative live slot failed and target_time was not explicitly specified,
-            # discover the latest available complete cached observation sequence
-            if target_time is None:
-                cached_slot = self.find_latest_cached_slot(count=count)
-                if cached_slot is not None:
-                    logger.info(f"Discovered latest valid complete Himawari sequence at cached slot: {cached_slot.isoformat()}")
-                    sequence = []
-                    for i in range(count):
-                        slot_time = cached_slot - timedelta(minutes=(count - 1 - i) * settings.FRAME_INTERVAL_MINUTES)
-                        obs = self.fetch_b13_observation(slot_time)
-                        sequence.append(obs)
-                    return sequence
-            raise
+        last_err = None
+        for cand_slot in slots_to_try:
+            try:
+                cand_seq = []
+                for i in range(count):
+                    slot_time = cand_slot - timedelta(minutes=(count - 1 - i) * settings.FRAME_INTERVAL_MINUTES)
+                    obs = self.fetch_b13_observation(slot_time)
+                    cand_seq.append(obs)
+                return cand_seq
+            except Exception as e:
+                last_err = e
+                continue
+
+        # If live retrieval failed, fallback to latest cached observation sequence
+        if target_time is None:
+            cached_slot = self.find_latest_cached_slot(count=count)
+            if cached_slot is not None:
+                logger.info(f"Discovered latest valid complete Himawari sequence at cached slot: {cached_slot.isoformat()}")
+                sequence = []
+                for i in range(count):
+                    slot_time = cached_slot - timedelta(minutes=(count - 1 - i) * settings.FRAME_INTERVAL_MINUTES)
+                    obs = self.fetch_b13_observation(slot_time)
+                    sequence.append(obs)
+                return sequence
+
+        if last_err:
+            raise last_err
+        raise HimawariUnavailableError("No valid Himawari sequence found.")
 

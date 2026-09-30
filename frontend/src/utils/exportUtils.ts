@@ -1,0 +1,129 @@
+// ============================================================
+// WeatherNow AI — CSV & JSON Export Utility
+// Allows direct download of genuine nowcast forecasts for selected coordinates
+// ============================================================
+
+import type { UnifiedNowcastResponse, WeatherLocation } from '../types/weather';
+import { SPATIAL_BOUNDS, FORECAST_HORIZONS } from '../constants';
+import { extractPointValuesFromHorizon } from './alertEngine';
+
+export function exportForecastAsCsv(
+  prediction: UnifiedNowcastResponse,
+  location: WeatherLocation
+) {
+  const { minLat, maxLat, minLng, maxLng } = SPATIAL_BOUNDS;
+  const row = Math.min(127, Math.max(0, Math.round(((maxLat - location.lat) / (maxLat - minLat)) * 127)));
+  const col = Math.min(127, Math.max(0, Math.round(((location.lng - minLng) / (maxLng - minLng)) * 127)));
+
+  const headers = [
+    'Location_Name',
+    'Latitude',
+    'Longitude',
+    'Grid_Row',
+    'Grid_Col',
+    'Base_Time_UTC',
+    'Horizon_Minutes',
+    'Target_Time_UTC',
+    'Rainfall_Rate_mm_hr',
+    'Rain_Occurrence_Probability_pct',
+    'Convective_Cloud_Signal_B13_235K',
+    'Lightning_Proxy_Risk_Score',
+    'Thunderstorm_Proxy_Risk_Score',
+    'Hail_Proxy_Risk_Score',
+    'Cloudburst_Proxy_Risk_Score',
+    'Downburst_Proxy_Risk_Score',
+  ];
+
+  const rows: string[] = [];
+  rows.push(headers.join(','));
+
+  FORECAST_HORIZONS.forEach((h) => {
+    const hData = prediction.horizons?.[String(h)];
+    const vals = extractPointValuesFromHorizon(hData, row, col);
+    const targetTime = hData?.target_time || '';
+
+    const rowData = [
+      `"${location.name.replace(/"/g, '""')}"`,
+      location.lat.toFixed(4),
+      location.lng.toFixed(4),
+      row,
+      col,
+      prediction.base_time,
+      h,
+      targetTime,
+      vals.rain.toFixed(3),
+      (vals.rain_probability * 100).toFixed(1),
+      vals.convective_cloud.toFixed(4),
+      vals.lightning.toFixed(4),
+      vals.thunderstorm.toFixed(4),
+      vals.hail.toFixed(4),
+      vals.cloudburst.toFixed(4),
+      vals.downburst.toFixed(4),
+    ];
+    rows.push(rowData.join(','));
+  });
+
+  const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.join('\n'));
+  const link = document.createElement('a');
+  link.setAttribute('href', csvContent);
+  const cleanName = location.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  link.setAttribute('download', `weathernow_${cleanName}_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export function exportForecastAsJson(
+  prediction: UnifiedNowcastResponse,
+  location: WeatherLocation
+) {
+  const { minLat, maxLat, minLng, maxLng } = SPATIAL_BOUNDS;
+  const row = Math.min(127, Math.max(0, Math.round(((maxLat - location.lat) / (maxLat - minLat)) * 127)));
+  const col = Math.min(127, Math.max(0, Math.round(((location.lng - minLng) / (maxLng - minLng)) * 127)));
+
+  const horizonForecasts = FORECAST_HORIZONS.map((h) => {
+    const hData = prediction.horizons?.[String(h)];
+    const vals = extractPointValuesFromHorizon(hData, row, col);
+    return {
+      horizon_minutes: h,
+      target_time: hData?.target_time || '',
+      metrics: {
+        rainfall_rate_mm_hr: Number(vals.rain.toFixed(3)),
+        rain_occurrence_probability_pct: Number((vals.rain_probability * 100).toFixed(1)),
+        convective_cloud_signal: Number(vals.convective_cloud.toFixed(4)),
+        lightning_proxy_risk_score: Number(vals.lightning.toFixed(4)),
+        thunderstorm_proxy_risk_score: Number(vals.thunderstorm.toFixed(4)),
+        hail_proxy_risk_score: Number(vals.hail.toFixed(4)),
+        cloudburst_proxy_risk_score: Number(vals.cloudburst.toFixed(4)),
+        downburst_proxy_risk_score: Number(vals.downburst.toFixed(4)),
+      },
+    };
+  });
+
+  const payload = {
+    service: 'WeatherNow AI Multi-Model Operational Nowcasting Platform',
+    exported_at: new Date().toISOString(),
+    base_observation_time: prediction.base_time,
+    location: {
+      id: location.id,
+      name: location.name,
+      state: location.state,
+      latitude: location.lat,
+      longitude: location.lng,
+      grid_cell: { row, col, grid_dimensions: '128x128', domain: '8°N–38°N, 68°E–98°E' },
+    },
+    canonical_models: prediction.models,
+    forecast_horizons: horizonForecasts,
+    scientific_disclaimer:
+      'Lightning, thunderstorm, hail, cloudburst and downburst metrics are severe weather risk scores and are not calibrated observational probabilities. Generated for decision-support purposes.',
+  };
+
+  const jsonStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+  const link = document.createElement('a');
+  link.setAttribute('href', jsonStr);
+  const cleanName = location.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  link.setAttribute('download', `weathernow_${cleanName}_${Date.now()}.json`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

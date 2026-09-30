@@ -103,7 +103,7 @@ export const ConvectiveSummaryCard: React.FC<ConvectiveSummaryCardProps> = ({
           {riskDescription}
         </p>
         <span className="text-[10px] text-gray-400 font-mono block italic">
-          Coupled Neural Nowcast (V4/V3) + Physics-Informed Proxies (V1)
+          Multi-Model Weather &amp; Severe Hazard Nowcast
         </span>
       </div>
 
