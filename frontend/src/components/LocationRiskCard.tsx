@@ -178,11 +178,6 @@ export const LocationRiskCard: React.FC<LocationRiskCardProps> = ({
           })}
         </div>
       </div>
-
-      {/* ── 5. Scientific Disclaimer Note ── */}
-      <p className="text-[10px] text-neutral-400 leading-tight italic pt-2 border-t border-[#383838]">
-        * Lightning, thunderstorm, hail, cloudburst and downburst are severe weather proxy risk scores ([0.0 - 1.0]), not calibrated observational probabilities.
-      </p>
     </div>
   );
 };
