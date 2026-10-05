@@ -29,6 +29,10 @@ export const SituationReportModal: React.FC<SituationReportModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const reportId = React.useMemo(() => {
+    return `MS-SITREP-${Date.now().toString().slice(-6)}`;
+  }, [isOpen]);
+
   if (!isOpen || !prediction) return null;
 
   const { minLat, maxLat, minLng, maxLng } = SPATIAL_BOUNDS;
@@ -36,10 +40,21 @@ export const SituationReportModal: React.FC<SituationReportModalProps> = ({
   const col = Math.min(127, Math.max(0, Math.round(((selectedLocation.lng - minLng) / (maxLng - minLng)) * 127)));
 
   const generatedTimeStr = formatIstDateTime(new Date());
-  const baseTimeStr = formatIstDateTime(prediction.base_time, 'N/A');
+  const obsTimestamp =
+    prediction.provenance?.observation_timestamp_utc ||
+    prediction.provenance?.observation_timestamp ||
+    prediction.base_time;
+  const baseTimeStr = formatIstDateTime(obsTimestamp, 'N/A');
 
-  const targetTimes = prediction.provenance?.target_times || {};
-  const validWindowStr = formatIstValidityWindow(targetTimes['30'], targetTimes['120']);
+  let validWindowStr = '--:-- IST → --:-- IST';
+  if (obsTimestamp) {
+    const obsMs = new Date(obsTimestamp).getTime();
+    if (!isNaN(obsMs)) {
+      const validStartIso = new Date(obsMs + 30 * 60000).toISOString();
+      const validEndIso = new Date(obsMs + 120 * 60000).toISOString();
+      validWindowStr = formatIstValidityWindow(validStartIso, validEndIso);
+    }
+  }
 
   // Extract values across all 4 horizons
   const horizonTable = FORECAST_HORIZONS.map((h) => {
@@ -116,7 +131,7 @@ export const SituationReportModal: React.FC<SituationReportModalProps> = ({
             </div>
             <div className="text-left sm:text-right text-xs font-mono text-gray-500 shrink-0">
               <div>Generated: <strong className="text-gray-900">{generatedTimeStr}</strong></div>
-              <div>Report ID: MS-SITREP-{Date.now().toString().slice(-6)}</div>
+              <div>Report ID: {reportId}</div>
             </div>
           </div>
 

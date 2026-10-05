@@ -43,10 +43,36 @@ export const App: React.FC = () => {
   const geocodeAbortRef = React.useRef<AbortController | null>(null);
 
   // Modals & operational states
-  const [isSituationReportOpen, setIsSituationReportOpen] = useState<boolean>(false);
+  const [isSituationReportOpen, setIsSituationReportOpen] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.location.pathname.startsWith('/reports');
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
+
+  // Sync browser back/forward navigation with modal/tab state
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      setIsSituationReportOpen(window.location.pathname.startsWith('/reports'));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleNavTabChange = useCallback((tab: string) => {
+    if (tab === 'Home') {
+      setIsSituationReportOpen(false);
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.history.pushState(null, '', '/');
+      }
+    } else if (tab === 'Reports') {
+      setIsSituationReportOpen(true);
+      if (typeof window !== 'undefined' && window.location.pathname !== '/reports') {
+        window.history.pushState(null, '', '/reports');
+      }
+    }
+  }, []);
 
   // Handle Station / Custom Probe Location Select with Reverse Geocoding
   const handleLocationSelect = useCallback(async (loc: WeatherLocation) => {
@@ -147,15 +173,9 @@ export const App: React.FC = () => {
         isLoading={isLoading}
         onRefresh={() => loadData(true)}
         selectedLocation={selectedLocation}
-        onOpenSituationReport={() => setIsSituationReportOpen(true)}
+        onOpenSituationReport={() => handleNavTabChange('Reports')}
         activeNavTab={isSituationReportOpen ? 'Reports' : 'Home'}
-        onNavTabChange={(tab) => {
-          if (tab === 'Home') {
-            setIsSituationReportOpen(false);
-          } else if (tab === 'Reports') {
-            setIsSituationReportOpen(true);
-          }
-        }}
+        onNavTabChange={handleNavTabChange}
       />
 
       {/* ── 2. Primary Operational Dashboard Workspace ── */}
@@ -289,7 +309,7 @@ export const App: React.FC = () => {
       {/* ── 3. Automated Situation Report Modal ── */}
       <SituationReportModal
         isOpen={isSituationReportOpen}
-        onClose={() => setIsSituationReportOpen(false)}
+        onClose={() => handleNavTabChange('Home')}
         prediction={prediction}
         selectedLocation={selectedLocation}
       />

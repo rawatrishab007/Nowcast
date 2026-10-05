@@ -30,7 +30,11 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const isModelLoaded = health?.model_loaded ?? false;
   const isLiveMode = prediction?.data_mode === 'live';
-  const baseTimeStr = formatIstDateTime(prediction?.base_time);
+  const obsTimestamp =
+    prediction?.provenance?.observation_timestamp_utc ||
+    prediction?.provenance?.observation_timestamp ||
+    prediction?.base_time;
+  const baseTimeStr = formatIstDateTime(obsTimestamp);
 
   const currentTab = activeNavTab || 'Home';
 

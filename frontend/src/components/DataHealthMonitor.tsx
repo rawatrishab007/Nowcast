@@ -17,7 +17,7 @@ interface DataHealthMonitorProps {
 export function computeDataFreshness(baseTime?: string | null): {
   label: string;
   isStale: boolean;
-  statusText: 'LIVE' | 'STALE' | 'STANDBY';
+  statusText: 'LIVE' | 'RECENT' | 'STALE' | 'STANDBY';
   textClass: string;
   badgeClass: string;
 } {
@@ -27,7 +27,7 @@ export function computeDataFreshness(baseTime?: string | null): {
       isStale: false,
       statusText: 'STANDBY',
       textClass: 'text-neutral-400',
-      badgeClass: 'bg-[#212121] text-neutral-400 border-[#383838]',
+      badgeClass: 'bg-[#212121] text-neutral-400 border border-[#383838]',
     };
   }
 
@@ -35,13 +35,21 @@ export function computeDataFreshness(baseTime?: string | null): {
   const now = Date.now();
   const diffMinutes = Math.max(0, Math.floor((now - obsTime) / (1000 * 60)));
 
-  if (diffMinutes <= 60) {
+  if (diffMinutes < 15) {
     return {
       label: `LIVE — ${diffMinutes}m old`,
       isStale: false,
       statusText: 'LIVE',
       textClass: 'text-blue-400',
-      badgeClass: 'bg-[#181818] text-blue-300 border border-blue-500/30',
+      badgeClass: 'bg-[#181818] text-blue-300 border border-blue-500/40',
+    };
+  } else if (diffMinutes <= 30) {
+    return {
+      label: `RECENT — ${diffMinutes}m old`,
+      isStale: false,
+      statusText: 'RECENT',
+      textClass: 'text-amber-400',
+      badgeClass: 'bg-amber-950/70 text-amber-300 border border-amber-800',
     };
   } else if (diffMinutes < 1440) {
     const hours = Math.floor(diffMinutes / 60);
@@ -51,7 +59,7 @@ export function computeDataFreshness(baseTime?: string | null): {
       isStale: true,
       statusText: 'STALE',
       textClass: 'text-red-400',
-      badgeClass: 'bg-red-950/80 text-red-300 border-red-800',
+      badgeClass: 'bg-red-950/80 text-red-300 border border-red-800',
     };
   } else {
     const days = Math.floor(diffMinutes / 1440);
@@ -62,7 +70,7 @@ export function computeDataFreshness(baseTime?: string | null): {
       isStale: true,
       statusText: 'STALE',
       textClass: 'text-red-400',
-      badgeClass: 'bg-red-950/80 text-red-300 border-red-800',
+      badgeClass: 'bg-red-950/80 text-red-300 border border-red-800',
     };
   }
 }
@@ -70,18 +78,35 @@ export function computeDataFreshness(baseTime?: string | null): {
 export const DataHealthMonitor: React.FC<DataHealthMonitorProps> = ({
   prediction,
   health,
+  pipelineHealth,
 }) => {
-  const perf = prediction?.provenance?.performance;
+  const perf = prediction?.provenance?.performance || pipelineHealth?.latencies_ms;
 
-  const v1Status = health?.models_status?.v1_hazard_proxies !== false ? 'LOADED' : 'ERROR';
-  const v3Status = health?.models_status?.v3_convective_cloud !== false ? 'LOADED' : 'ERROR';
-  const v4Status = health?.models_status?.v4_rainfall !== false ? 'LOADED' : 'ERROR';
+  const v1Status = (pipelineHealth?.model_v1_status || (health?.models_status?.v1_hazard_proxies !== false ? 'LOADED' : 'ERROR')) as 'LOADED' | 'ERROR';
+  const v3Status = (pipelineHealth?.model_v3_status || (health?.models_status?.v3_convective_cloud !== false ? 'LOADED' : 'ERROR')) as 'LOADED' | 'ERROR';
+  const v4Status = (pipelineHealth?.model_v4_status || (health?.models_status?.v4_rainfall !== false ? 'LOADED' : 'ERROR')) as 'LOADED' | 'ERROR';
 
-  const baseTimeStr = formatIstDateTime(prediction?.base_time, 'Awaiting Observation');
-  const targetTimes = prediction?.provenance?.target_times || {};
-  const validWindowStr = formatIstValidityWindow(targetTimes['30'], targetTimes['120']);
+  const obsTimestamp =
+    prediction?.provenance?.observation_timestamp_utc ||
+    prediction?.provenance?.observation_timestamp ||
+    prediction?.base_time ||
+    pipelineHealth?.observation_timestamp_utc ||
+    pipelineHealth?.last_data_timestamp;
 
-  const freshness = computeDataFreshness(prediction?.base_time);
+  const baseTimeStr = formatIstDateTime(obsTimestamp, 'Awaiting Observation');
+
+  // Compute validity range strictly from observation timestamp
+  let validWindowStr = '--:-- IST → --:-- IST';
+  if (obsTimestamp) {
+    const obsMs = new Date(obsTimestamp).getTime();
+    if (!isNaN(obsMs)) {
+      const validStartIso = new Date(obsMs + 30 * 60000).toISOString();
+      const validEndIso = new Date(obsMs + 120 * 60000).toISOString();
+      validWindowStr = formatIstValidityWindow(validStartIso, validEndIso);
+    }
+  }
+
+  const freshness = computeDataFreshness(obsTimestamp);
 
   const modelRows = [
     {

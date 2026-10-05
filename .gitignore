@@ -45,3 +45,6 @@ data_cache/
 *.nc
 *.grib2
 
+# Vercel
+.vercel
+

@@ -97,16 +97,19 @@ export interface DecisionSupportAlert {
 
 export interface PipelineHealthResponse {
   status: string;
-  himawari_status: 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE';
-  gfs_status: 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE';
+  himawari_status: 'ONLINE' | 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE' | 'OFFLINE';
+  gfs_status: 'ONLINE' | 'CONNECTED' | 'DEGRADED' | 'UNAVAILABLE' | 'OFFLINE';
   temporal_alignment: 'VALID' | 'INVALID';
   input_tensor: 'VALID' | 'INVALID';
   model_v1_status: 'LOADED' | 'ERROR';
   model_v3_status: 'LOADED' | 'ERROR';
   model_v4_status: 'LOADED' | 'ERROR';
+  observation_timestamp_utc?: string | null;
   last_data_timestamp?: string | null;
   forecast_generated_at?: string | null;
   forecast_valid_range?: { start: string; end: string } | null;
+  data_status?: 'LIVE' | 'RECENT' | 'STALE' | 'STANDBY';
+  ingest_status?: 'ONLINE' | 'DEGRADED' | 'OFFLINE';
   latencies_ms?: {
     acquisition_latency_ms?: number;
     inference_latency_ms?: number;

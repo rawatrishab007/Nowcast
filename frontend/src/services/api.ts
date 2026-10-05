@@ -10,7 +10,34 @@ import type {
   ModelInfoResponse,
 } from '../types/weather';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+// Configurable Production Backend API URL (e.g. AWS deployment)
+// Empty / undefined in local development defaults to Vite dev proxy '/api'
+export const API_BASE_URL: string =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, '') || '';
+
+/**
+ * Resolves the full URL for a given backend API endpoint.
+ *
+ * Configurable via VITE_API_BASE_URL for production (e.g. AWS deployment).
+ * Preserves the FastAPI '/api' prefix and prevents double prefixes.
+ * In local dev without VITE_API_BASE_URL, routes through Vite proxy at '/api'.
+ */
+export function getApiUrl(endpoint: string): string {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (API_BASE_URL) {
+    if (API_BASE_URL.endsWith('/api')) {
+      return `${API_BASE_URL}${cleanEndpoint}`;
+    }
+    if (cleanEndpoint.startsWith('/api')) {
+      return `${API_BASE_URL}${cleanEndpoint}`;
+    }
+    return `${API_BASE_URL}/api${cleanEndpoint}`;
+  }
+
+  // Relative path fallback for local dev proxy
+  return `/api${cleanEndpoint.startsWith('/api') ? cleanEndpoint.slice(4) : cleanEndpoint}`;
+}
 
 export class ApiError extends Error {
   statusCode: number;
@@ -27,7 +54,7 @@ export class ApiError extends Error {
 }
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+  const url = getApiUrl(endpoint);
   try {
     const res = await fetch(url, options);
     if (!res.ok) {

@@ -81,19 +81,63 @@ def get_pipeline_health() -> PipelineHealthResponse:
             "end": target_times.get("120", ""),
         }
         latencies = last_pred.provenance.get("performance") if last_pred.provenance else None
+    else:
+        try:
+            from data_providers.himawari import HimawariDownloader
+            latest_slot = HimawariDownloader().find_latest_cached_slot()
+            if latest_slot:
+                last_ts = latest_slot.isoformat()
+                valid_range = {
+                    "start": (latest_slot + datetime.timedelta(minutes=30)).isoformat(),
+                    "end": (latest_slot + datetime.timedelta(minutes=120)).isoformat(),
+                }
+        except Exception:
+            pass
+
+    # Strictly compute validity range if missing but last_ts is known
+    if last_ts and (not valid_range or not valid_range.get("start")):
+        try:
+            obs_dt = datetime.datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+            valid_range = {
+                "start": (obs_dt + datetime.timedelta(minutes=30)).isoformat(),
+                "end": (obs_dt + datetime.timedelta(minutes=120)).isoformat(),
+            }
+        except Exception:
+            pass
+
+    # Strictly determine observation freshness: <15m LIVE, 15-30m RECENT, >30m STALE
+    data_status = "STANDBY"
+    if last_ts:
+        try:
+            obs_dt = datetime.datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            diff_mins = max(0, int((now_utc - obs_dt).total_seconds() / 60))
+            if diff_mins < 15:
+                data_status = "LIVE"
+            elif diff_mins <= 30:
+                data_status = "RECENT"
+            else:
+                data_status = "STALE"
+        except Exception:
+            data_status = "RECENT"
+
+    ingest_status = "ONLINE" if all_models_ok else "DEGRADED"
 
     return PipelineHealthResponse(
         status="ok" if all_models_ok else "degraded",
-        himawari_status="CONNECTED",
-        gfs_status="CONNECTED",
+        himawari_status=ingest_status,
+        gfs_status="ONLINE" if all_models_ok else "DEGRADED",
         temporal_alignment="VALID",
         input_tensor="VALID",
         model_v1_status="LOADED" if is_v1_loaded else "ERROR",
         model_v3_status="LOADED" if is_v3_loaded else "ERROR",
         model_v4_status="LOADED" if is_v4_loaded else "ERROR",
+        observation_timestamp_utc=last_ts,
         last_data_timestamp=last_ts,
         forecast_generated_at=gen_ts,
         forecast_valid_range=valid_range,
+        data_status=data_status,
+        ingest_status=ingest_status,
         latencies_ms=latencies,
         device=str(model_manager.get_device()),
         message="Operational live satellite & NWP ingestion pipeline healthy." if all_models_ok else "Model degradation detected."

@@ -49,10 +49,26 @@ export const SummaryMetricCards: React.FC<SummaryMetricCardsProps> = ({
 
   const hzCfg = HAZARD_CONFIG[selectedHazard] || { label: 'Hazard Rate', shortLabel: 'Hazard', unit: '' };
 
-  // Data Freshness
-  const obsTimestamp = prediction?.provenance?.observation_timestamp || prediction?.base_time;
+  // Data Freshness & Observation Lineage
+  const obsTimestamp =
+    prediction?.provenance?.observation_timestamp_utc ||
+    prediction?.provenance?.observation_timestamp ||
+    prediction?.base_time ||
+    pipelineHealth?.observation_timestamp_utc ||
+    pipelineHealth?.last_data_timestamp;
   const istObsTime = obsTimestamp ? formatIstDateTime(obsTimestamp) : 'Syncing...';
   const freshness = computeDataFreshness(obsTimestamp);
+
+  // Strictly calculate validity range (+30m to +120m) from the real observation timestamp
+  let validityRangeStr = '--:-- IST → --:-- IST';
+  if (obsTimestamp) {
+    const obsMs = new Date(obsTimestamp).getTime();
+    if (!isNaN(obsMs)) {
+      const validStartIso = new Date(obsMs + 30 * 60000).toISOString();
+      const validEndIso = new Date(obsMs + 120 * 60000).toISOString();
+      validityRangeStr = formatIstValidityWindow(validStartIso, validEndIso);
+    }
+  }
 
   // Latency & Device
   const totalLatencyMs = prediction?.provenance?.performance?.total_latency_ms ?? 0;
@@ -64,10 +80,17 @@ export const SummaryMetricCards: React.FC<SummaryMetricCardsProps> = ({
     ? `(${prediction.provenance.input_tensor_shape.join(', ')})`
     : '(1, 6, 8, 128, 128)';
   const alignmentStatus = pipelineHealth?.temporal_alignment || 'VALID';
-  const himawariConnected = pipelineHealth?.himawari_status === 'CONNECTED' || (prediction ? true : false);
 
-  const targetTimes = prediction?.provenance?.target_times || {};
-  const validityRangeStr = formatIstValidityWindow(targetTimes['30'], targetTimes['120']);
+  // Himawari-9 Ingest status: ONLINE / DEGRADED / OFFLINE (strictly decoupled from freshness)
+  const rawIngestStatus = pipelineHealth?.himawari_status || (pipelineHealth as any)?.ingest_status;
+  const himawariStatus: 'ONLINE' | 'DEGRADED' | 'OFFLINE' =
+    rawIngestStatus === 'ONLINE' || rawIngestStatus === 'CONNECTED'
+      ? 'ONLINE'
+      : rawIngestStatus === 'DEGRADED'
+      ? 'DEGRADED'
+      : prediction
+      ? 'ONLINE'
+      : 'OFFLINE';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -180,16 +203,20 @@ export const SummaryMetricCards: React.FC<SummaryMetricCardsProps> = ({
       <div className="dark-card p-4 rounded-2xl flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+            <span className={`w-2 h-2 rounded-full ${
+              freshness.statusText === 'LIVE'
+                ? 'bg-blue-400 animate-pulse'
+                : freshness.statusText === 'RECENT'
+                ? 'bg-amber-400'
+                : freshness.statusText === 'STALE'
+                ? 'bg-red-500'
+                : 'bg-neutral-500'
+            }`}></span>
             <span className="text-[11px] font-bold tracking-wider text-blue-400 uppercase font-heading">
               Observation Sync
             </span>
           </div>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border font-heading ${
-            freshness.isStale
-              ? 'bg-red-950/80 text-red-300 border-red-800'
-              : 'bg-[#212121] text-blue-300 border border-[#383838]'
-          }`}>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border font-heading ${freshness.badgeClass}`}>
             {freshness.statusText}
           </span>
         </div>
@@ -205,8 +232,11 @@ export const SummaryMetricCards: React.FC<SummaryMetricCardsProps> = ({
 
         <div className="pt-2 border-t border-[#383838] flex items-center justify-between text-[11px] text-[#BDBDBD]">
           <span>Himawari-9 Ingest:</span>
-          <span className={`font-semibold ${himawariConnected ? 'text-blue-400' : 'text-red-400'}`}>
-            {himawariConnected ? 'ONLINE' : 'CACHED'}
+          <span className={`font-semibold ${
+            himawariStatus === 'ONLINE' ? 'text-blue-400' :
+            himawariStatus === 'DEGRADED' ? 'text-amber-400' : 'text-red-400'
+          }`}>
+            {himawariStatus}
           </span>
         </div>
       </div>

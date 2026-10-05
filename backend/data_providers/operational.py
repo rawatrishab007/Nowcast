@@ -204,8 +204,31 @@ class LivePredictionService:
                 "device": str(device),
             }
 
+            # Compute observation freshness status
+            live_data_status = "RECENT"
+            try:
+                obs_dt = datetime.fromisoformat(base_time_str.replace("Z", "+00:00"))
+                now_utc = datetime.now(timezone.utc)
+                diff_mins = max(0, int((now_utc - obs_dt).total_seconds() / 60))
+                if diff_mins < 15:
+                    live_data_status = "LIVE"
+                elif diff_mins <= 30:
+                    live_data_status = "RECENT"
+                else:
+                    live_data_status = "STALE"
+            except Exception:
+                pass
+
             complete_provenance = {
                 "data_source": "NOAA Himawari-9 AHI + NOAA GFS 0.25° NWP",
+                "observation_timestamp_utc": base_time_str,
+                "observation_timestamp": base_time_str,
+                "data_status": live_data_status,
+                "ingest_status": "ONLINE",
+                "forecast_valid_range": {
+                    "start": target_times.get("30"),
+                    "end": target_times.get("120"),
+                },
                 "synthetic_data_used": False,
                 "base_time": base_time_str,
                 "target_times": target_times,
@@ -348,6 +371,21 @@ class LivePredictionService:
                 "b13_grid": b13_grid.tolist(),
             }
 
+            # Compute observation freshness status
+            data_status = "RECENT"
+            try:
+                obs_dt = datetime.fromisoformat(base_time_str.replace("Z", "+00:00"))
+                now_utc = datetime.now(timezone.utc)
+                diff_mins = max(0, int((now_utc - obs_dt).total_seconds() / 60))
+                if diff_mins < 15:
+                    data_status = "LIVE"
+                elif diff_mins <= 30:
+                    data_status = "RECENT"
+                else:
+                    data_status = "STALE"
+            except Exception:
+                pass
+
             t_infer_start = time.perf_counter()
             response = run_unified_nowcast_inference(
                 physical_tensor=physical_tensor,
@@ -355,6 +393,14 @@ class LivePredictionService:
                 base_time_str=base_time_str,
                 provenance_extra={
                     "data_source": "NOAA Himawari-9 AHI + NOAA GFS 0.25° NWP",
+                    "observation_timestamp_utc": base_time_str,
+                    "observation_timestamp": base_time_str,
+                    "data_status": data_status,
+                    "ingest_status": "ONLINE",
+                    "forecast_valid_range": {
+                        "start": target_times["30"],
+                        "end": target_times["120"],
+                    },
                     "synthetic_data_used": False,
                     "target_times": target_times,
                     "observation_cadence": "10 minutes",
