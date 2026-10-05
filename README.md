@@ -3,6 +3,23 @@
 **AI-Powered Convective Weather Nowcasting & Severe Weather Decision Support Platform**  
 *Smart India Hackathon (SIH26084)*
 
+🌐 **Live Vercel Deployment**: [https://frontend-gamma-six-53.vercel.app](https://frontend-gamma-six-53.vercel.app)
+
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live_Deployment-black?style=for-the-badge&logo=vercel)](https://frontend-gamma-six-53.vercel.app)
+[![Vite](https://img.shields.io/badge/Vite-7.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+
+---
+
+## 🚀 Live Deployment & Architecture
+
+| Component | Platform | Status | URL / Access |
+| :--- | :--- | :--- | :--- |
+| **Frontend Web App** | **Vercel** | 🟢 **Live** | [https://frontend-gamma-six-53.vercel.app](https://frontend-gamma-six-53.vercel.app) |
+| **Backend API Services** | **AWS (EC2 / ECS)** | 🟡 *Targeted for AWS deployment* | Configurable via `VITE_API_BASE_URL` |
+
 ---
 
 ## 🛰️ Overview

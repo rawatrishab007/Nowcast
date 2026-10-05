@@ -2,6 +2,8 @@
 
 **Megh Setu** frontend is a high-performance, responsive web application for real-time convective nowcasting (0–120 minutes) across the Indian subcontinent.
 
+🌐 **Live Vercel Deployment**: [https://frontend-gamma-six-53.vercel.app](https://frontend-gamma-six-53.vercel.app)
+
 ---
 
 ## 🛠️ Technology Stack
@@ -75,3 +77,23 @@ Dashboard available at: `http://localhost:5173`
 npm run build
 ```
 Generates production bundle in `dist/`.
+
+---
+
+## ☁️ Vercel Deployment
+
+The frontend is configured for one-click deployment on **Vercel**:
+
+* **Root Directory**: `frontend`
+* **Framework**: `Vite`
+* **Build Command**: `npm run build`
+* **Output Directory**: `dist`
+* **SPA Routing**: Handled via `frontend/vercel.json` (rewrites `/*` to `/index.html`)
+
+### Connecting to Backend
+In the Vercel project settings under **Environment Variables**, set:
+```bash
+VITE_API_BASE_URL=https://<your-aws-backend-domain>
+```
+All API queries will automatically target the production backend while preserving full route paths.
+
