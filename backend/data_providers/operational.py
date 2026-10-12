@@ -72,6 +72,16 @@ class LivePredictionService:
         """
         with self._lock:
             t_start = time.perf_counter()
+            curr_time = time.time()
+
+            # Early cache check if within TTL
+            if (
+                target_time is None
+                and self._last_prediction is not None
+                and (curr_time - self._last_calc_time) < self.cache_ttl_seconds
+            ):
+                logger.info(f"Serving cached live prediction for base_time: {self._last_base_time}")
+                return self._last_prediction
 
             # 1. Model Availability Check
             if not model_manager.is_loaded():
@@ -288,9 +298,19 @@ class LivePredictionService:
         """
         with self._lock:
             t_start = time.perf_counter()
+            curr_time = time.time()
+
+            # Early cache check if within TTL
+            if (
+                target_time is None
+                and self._last_unified_prediction is not None
+                and (curr_time - self._last_unified_calc_time) < self.cache_ttl_seconds
+            ):
+                logger.info(f"Serving cached unified nowcast for base_time: {self._last_unified_base_time}")
+                return self._last_unified_prediction
 
             if not model_manager.is_loaded():
-                model_loaded = model_manager.load_models()
+                model_loaded = model_manager.load_model()
                 if not model_loaded or not model_manager.is_loaded():
                     raise DataProviderError("MODEL_UNAVAILABLE: Checkpoints for V1, V3, or V4 could not be loaded.")
 
