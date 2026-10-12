@@ -1,7 +1,20 @@
-# Megh Setu
+<div align="center">
 
-**AI-Powered Convective Weather Nowcasting & Severe Weather Decision Support Platform**  
-*Smart India Hackathon (SIH26084)*
+# Megh Setu (मेघ सेतु)
+
+**AI-Powered Convective Weather Nowcasting & Severe Weather Decision Support**
+
+Smart India Hackathon · Problem Statement **SIH26084**
+
+[![Live Demo](https://img.shields.io/badge/Vercel-Live%20Frontend-black?logo=vercel)](https://frontend-gamma-six-53.vercel.app/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+
+[Live Dashboard](https://frontend-gamma-six-53.vercel.app/) · [GitHub](https://github.com/rawatrishab007/Nowcast) · [API Docs (local)](http://localhost:8000/docs)
+
+</div>
 
 🌐 **Live Vercel Deployment**: [https://frontend-gamma-six-53.vercel.app](https://frontend-gamma-six-53.vercel.app)
 
@@ -22,298 +35,422 @@
 
 ---
 
-## 🛰️ Overview
+## Contents
 
-**Megh Setu** is an operational short-range weather nowcasting and severe convective hazard assessment platform engineered for the Indian subcontinent (domain: **8°N–38°N, 68°E–98°E**). 
+- [Problem](#problem)
+- [What Megh Setu does](#what-megh-setu-does)
+- [Live deployment](#live-deployment)
+- [Architecture](#architecture)
+- [Models](#models)
+- [Input tensor](#input-tensor)
+- [Frontend](#frontend)
+- [API](#api)
+- [Repository layout](#repository-layout)
+- [Quickstart](#quickstart)
+- [Docker](#docker)
+- [Environment](#environment)
+- [Disclaimer](#disclaimer)
 
-The platform integrates real-time **Himawari-9 AHI satellite infrared observations** with **NOAA GFS 0.25° Numerical Weather Prediction (NWP)** fields. By feeding temporally synchronized 6-frame atmospheric tensors into multi-model ConvLSTM neural networks, Megh Setu generates high-resolution 0–120 minute nowcasts (+30m, +60m, +90m, +120m) for precipitation, deep convection, and severe weather hazard indicators.
+---
+
+## Problem
+
+Severe convective weather — thunderstorms, lightning, hail, cloudbursts, and downbursts — develops on **sub-hourly** timescales. Lightning alone kills thousands of people in India every year.
+
+Global NWP systems such as GFS are essential for synoptic context, but they typically:
+
+- update on multi-hour cycles
+- assimilate observations with latency
+- cannot fully resolve local convective initiation at 0–2 hour range
+
+**SIH26084** asks for a short-range nowcasting and decision-support system that can fill that 0–120 minute gap.
+
+---
+
+## What Megh Setu does
+
+Megh Setu is an operational-style prototype for the Indian subcontinent:
+
+| | |
+| :--- | :--- |
+| **Domain** | 8°N–38°N, 68°E–98°E |
+| **Cadence** | 6 frames, 10 minutes apart (`t−50m` … `t0`) |
+| **Grid** | 128 × 128 (~60 km cell size over the full domain) |
+| **Lead times** | +30, +60, +90, +120 minutes |
+| **Inputs** | Himawari-9 AHI Band 13 IR + GFS 0.25° fields (via Open-Meteo) |
+| **Models** | V4 rainfall · V3 convective cloud · V1 multi-hazard proxies |
+
+It produces:
+
+1. **Rain rate** and rain probability (V4, experimental)
+2. **Cold-cloud / deep-convection proxy** \(P(\text{future B13} < 235\,\text{K})\) (V3)
+3. **Hazard risk scores** for lightning, thunderstorm, hail, cloudburst, and downburst (V1)
+4. **Rule-based advisories**, map replay, station/probe inspection, and a print-ready Situation Report
+
+All operator-facing clocks are shown in **IST (UTC+05:30)**.
+
+---
+
+## Live deployment
+
+| Component | Platform | Status | Access |
+| :--- | :--- | :---: | :--- |
+| Frontend dashboard | Vercel | Live | [frontend-gamma-six-53.vercel.app](https://frontend-gamma-six-53.vercel.app/) |
+| Backend API | Local / AWS-targeted | Configurable | `VITE_API_BASE_URL` (default local: `http://localhost:8000/api`) |
+| Swagger | FastAPI | Local | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| Health | FastAPI | Local | [http://localhost:8000/api/health](http://localhost:8000/api/health) |
+| Pipeline telemetry | FastAPI | Local | [http://localhost:8000/api/health/pipeline](http://localhost:8000/api/health/pipeline) |
+
+The Vercel app is the operations UI. Full live nowcasts require a running FastAPI backend with model checkpoints and network access to Himawari-9 S3 + Open-Meteo GFS.
+
+---
+
+## Architecture
 
 ```
-                   MEGH SETU OPERATIONAL PIPELINE
-                   
-  Himawari-9 AHI (Band 13)            NOAA GFS 0.25° NWP Fields
-  [10.4µm IR Brightness Temp]        [t2m, d2m, u10, v10, CAPE, CIN, tp]
-              │                                      │
-              └───────────────┬──────────────────────┘
-                              ▼
-                Spatiotemporal Grid Alignment
-                  6 frames @ 10-min cadence
-                              ▼
-                 Input Tensor (1, 6, 8, 128, 128)
-                              ▼
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-   Model V4              Model V3              Model V1
-Rainfall Nowcast     Convective Cloud      Severe Weather
-(Rain Rate & Prob)   P(B13 < 235 K)        Hazard Assessment
-        │                     │                     │
-        └─────────────────────┼─────────────────────┘
-                              ▼
-                  FastAPI Backend Services
-                  (/api/v1/nowcast, /api/health)
-                              ▼
-            Megh Setu High-Contrast Operations UI
-         (Interactive Map, Replay, Alert Engine, SitRep)
+Himawari-9 AHI Band 13 (10.4 µm IR)     NOAA GFS 0.25° (Open-Meteo)
+        B13 brightness temperature        t2m, d2m, u10, v10, CAPE, CIN, tp
+                         \                      /
+                          \                    /
+                     Spatiotemporal alignment
+                   6 frames @ 10-min cadence
+                              |
+                 Tensor  (1, 6, 8, 128, 128)
+                              |
+              +---------------+---------------+
+              |               |               |
+           V4 Rain         V3 Cloud        V1 Hazards
+           mm/hr, P(rain)  P(B13 < 235 K)  5 risk scores
+              |               |               |
+              +---------------+---------------+
+                              |
+                    FastAPI  /api/v1/nowcast
+                              |
+                 Megh Setu dashboard (React 19 + Vite)
+                 Map · Replay · Alerts · SitRep · Health
 ```
 
----
-
-## ✨ Key Capabilities
-
-* **Live Satellite Ingestion**: Direct automated ingestion and decoding of NOAA Himawari-9 AHI Band 13 (10.4 µm clean infrared) brightness temperature grids.
-* **Operational NWP Integration**: Real-time atmospheric thermodynamic and kinematic parameters from NOAA GFS 0.25° resolution fields.
-* **Temporal Alignment Engine**: Synchronizes 6 historical time slices ($t_{-50\text{m}}$ to $t_0$ at 10-minute cadence) into calibrated 8-channel physical tensors.
-* **Multi-Horizon Nowcasting**: Continuous spatial predictions at **+30 min**, **+60 min**, **+90 min**, and **+120 min** lead times on a 128×128 grid (approx. 60 km domain resolution).
-* **Multi-Model Intelligence**:
-  * **V4 Rainfall Nowcast**: Experimental quantitative precipitation forecast (mm/hr) and precipitation occurrence probability $[0, 1]$.
-  * **V3 Convective Cloud Nowcast**: Predicts future cold-cloud deep convective proxy $P(\text{future } B_{13} < 235\text{ K})$.
-  * **V1 Severe Weather Assessment**: Evaluates physical proxy risk scores for severe convective hazards.
-* **Decision-Support Risk Engine**: Rule-based meteorological threshold evaluation triggering automated operational advisories.
-* **Scenario Replay & Forecast Timeline**: Scrub through temporal forecast horizons with instant map rendering and coordinate inspection.
-* **Geospatial Location Inspector**: Probe any point across India or select major monitoring stations with automated reverse geocoding.
-* **Meteorological Situation Report (SitRep)**: One-click exportable, print-ready formal situation briefing with a dedicated clean white document layout.
-* **Operational Health & Latency Monitor**: Real-time telemetry monitoring data freshness, model load states, ingestion health, and inference latency.
-* **IST-Centric Interface**: All user-facing operational timestamps and validity windows formatted in Indian Standard Time (IST, UTC+05:30).
-
----
-
-## 🔬 Model Architecture & Semantics
-
-Megh Setu orchestrates three specialized neural architectures sharing a spatio-temporal ConvLSTM backbone:
-
-### 1. Model V4 — Rainfall Nowcasting (`SIHV4RainfallNowcast`)
-* **Role**: Experimental precipitation rate and occurrence nowcasting.
-* **Parameters**: 93,208 parameters.
-* **Architecture**: Conv2D Encoder $\rightarrow$ ConvLSTM recurrent cell (32 channels) $\rightarrow$ Conv2D Decoder with dual heads:
-  * `rain`: Quantitative rainfall rate output in $\text{mm/hr}$.
-  * `rain_probability`: Probability of precipitation occurrence $[0.0, 1.0]$.
-* **Horizons**: +30, +60, +90, +120 minutes.
-* **Note**: V4 is an experimental research model calibrated against satellite precipitation benchmarks.
-
-### 2. Model V3 — Convective Cloud Nowcasting (`SIHV3Nowcast`)
-* **Role**: Deep convection and cold-cloud proxy forecasting.
-* **Parameters**: 200,996 parameters.
-* **Architecture**: Conv2D Encoder (BatchNorm + ReLU) $\rightarrow$ ConvLSTM cell (48 hidden channels) $\rightarrow$ Conv2D Decoder $\rightarrow$ 4 Horizon Output Heads.
-* **Target Semantics**: Continuous probability map of $P(\text{future } B_{13} < 235\text{ K})$.
-* **Horizons**: +30, +60, +90, +120 minutes.
-* **Input Dimensions**: $(1, 6, 8, 128, 128)$ across 8 meteorological channels.
-
-### 3. Model V1 — Severe Weather Hazard Assessment (`SIHMultiHazardNowcast`)
-* **Role**: Multi-hazard severe convective risk assessment.
-* **Parameters**: 93,548 parameters.
-* **Supported Hazards**:
-  * ⚡ **Lightning** Risk Score $[0.0 - 1.0]$
-  * ⛈️ **Thunderstorm** Risk Score $[0.0 - 1.0]$
-  * 🧊 **Hail** Risk Score $[0.0 - 1.0]$
-  * 🌊 **Cloudburst** Risk Score $[0.0 - 1.0]$
-  * 💨 **Downburst** Risk Score $[0.0 - 1.0]$
-* **Scientific Semantics**: V1 outputs represent proxy risk scores derived from atmospheric thermodynamic and kinematic instability parameters. They are risk assessment indices, not calibrated observational probabilities.
-
----
-
-## 📊 Data Pipeline & Input Tensor Specification
-
-Every inference pass constructs a normalized physical tensor of shape `(batch=1, time=6, channels=8, height=128, width=128)`:
-
-| Index | Channel | Source | Description | Physical Unit |
-| :---: | :---: | :---: | :--- | :---: |
-| **0** | `B13` | Himawari-9 AHI | Clean Infrared Brightness Temperature (10.4 µm) | $\text{K}$ |
-| **1** | `t2m` | GFS NWP | 2-meter Air Temperature | $\text{K}$ |
-| **2** | `d2m` | GFS NWP | 2-meter Dewpoint Temperature | $\text{K}$ |
-| **3** | `u10` | GFS NWP | 10-meter Zonal (U) Wind Component | $\text{m/s}$ |
-| **4** | `v10` | GFS NWP | 10-meter Meridional (V) Wind Component | $\text{m/s}$ |
-| **5** | `cape` | GFS NWP | Convective Available Potential Energy | $\text{J/kg}$ |
-| **6** | `cin` | GFS NWP | Convective Inhibition | $\text{J/kg}$ |
-| **7** | `tp` | GFS NWP | Total Precipitation Accumulation | $\text{m}$ |
-
-### Live Operational Data Sources
-* **Satellite Scans**: AWS Open Data Registry Public Bucket (`noaa-himawari9`) for Himawari-9 full-disk AHI Band 13 radiance data (public access, no AWS credentials required).
-* **NWP Forecasts**: Operational 0.25° GFS atmospheric fields synchronized for the South Asian spatial bounding box ($8^\circ\text{N} - 38^\circ\text{N}$, $68^\circ\text{E} - 98^\circ\text{E}$).
-
----
-
-## 🖥️ Frontend User Interface
-
-The Megh Setu frontend is built with **React 19**, **TypeScript**, **Tailwind CSS**, and **Vite**:
-
-* **ChatGPT-Style Neutral Dark Operations Dashboard**:
-  * True neutral charcoal background (`#181818`) with elevated lighter dark-grey cards (`#2A2A2A`) and subtle borders (`#383838`).
-  * High-contrast white typography (`#FFFFFF` / `#F5F5F5`) with crisp blue section headings (`#60A5FA` / `text-blue-400`).
-  * Color restraint: Red (`#EF4444` / `#DC2626`) is strictly reserved for critical alerts and error conditions.
-* **Simplified Header Navigation**:
-  * Clean navigation containing **Home** (Dashboard) and **Reports** (Situation Report).
-* **Professional White Situation Report**:
-  * Dedicated document layout with pure white background (`#FFFFFF`), near-black text, blue headings, and print-ready CSS formatting.
-* **Interactive Leaflet Weather Map**: Custom colormaps for each hazard layer, smooth bilinear interpolation, and interactive probes.
-* **Trend Analysis**: SVG multi-horizon trend charts with responsive value tags across lead times.
-
----
-
-## 🔌 Backend REST API Reference
-
-The FastAPI service exposes the following endpoints (documented via Swagger at `/docs`):
-
-### Core Prediction Endpoints
-* **`GET /api/v1/nowcast`** (Alias: `/api/nowcast`)  
-  *Executes unified multi-model inference (V1, V3, V4) on live operational satellite & NWP data.*
-* **`GET /api/predict/live`**  
-  *Executes V3 convective nowcasting on live operational atmospheric inputs.*
-* **`GET /api/predict/demo`**  
-  *Executes nowcasting on stored benchmark validation datasets.*
-* **`POST /api/predict`**  
-  *Accepts custom 6-frame, 8-channel JSON tensors for research inference.*
-
-### System Health & Diagnostics
-* **`GET /api/health`**  
-  *Returns backend operational readiness, hardware accelerator (`cpu`/`cuda`/`mps`), and model load statuses (V1, V3, V4).*
-* **`GET /api/health/pipeline`**  
-  *Returns data ingestion health for Himawari-9 S3, GFS NWP, temporal alignment, tensor validation, data freshness, and inference latencies.*
-* **`GET /api/model-info`**  
-  *Returns exact architecture specifications, channel ordering, and target semantics.*
-* **`GET /`**  
-  *Root discovery endpoint with service metadata and documentation links.*
-
----
-
-## 📁 Repository Structure
-
-```
-Megh-Setu/
-├── ai_ml/                      # Machine learning models & training artifacts
-│   └── models/                 # Model definition packages (v1, v3, v4)
-├── backend/                    # Python FastAPI service
-│   ├── data_providers/         # Himawari-9 S3 & GFS NWP ingestion pipelines
-│   ├── models/                 # PyTorch checkpoints (e.g., sih_v3_best.pth)
-│   ├── routes/                 # FastAPI routes (health.py, prediction.py)
-│   ├── utils/                  # Normalization & tensor preprocessing
-│   ├── config.py               # Channel constants, spatial bounds, settings
-│   ├── inference.py            # Unified model forward pass & hazard evaluation
-│   ├── main.py                 # FastAPI application entry point & CORS
-│   ├── model_loader.py         # ConvLSTM architectures & checkpoint managers
-│   ├── physics.py              # Atmospheric thermodynamics & proxy estimators
-│   ├── schemas.py              # Pydantic validation models
-│   ├── requirements.txt        # Python backend dependencies
-│   └── .env.example            # Backend configuration template
-├── frontend/                   # React 19 + TypeScript + Vite web dashboard
-│   ├── src/
-│   │   ├── components/         # Dashboard & report components (Header, MapView, etc.)
-│   │   ├── services/           # Axios API client services
-│   │   ├── types/              # TypeScript meteorological data contracts
-│   │   ├── utils/              # Alert engine, geocoding, time formatters, export
-│   │   ├── App.tsx             # Main application workspace layout
-│   │   ├── constants.ts        # Station catalog & bounding box definitions
-│   │   ├── index.css           # Tailwind custom styling & Leaflet overrides
-│   │   └── index.tsx           # React entry point
-│   ├── package.json            # Frontend package scripts & dependencies
-│   ├── vite.config.ts          # Vite build configuration & proxy rules
-│   └── .env.example            # Frontend environment template
-└── README.md                   # Root project documentation
+```mermaid
+flowchart LR
+  H9[Himawari-9 AHI B13] --> ALIGN[Alignment + freeze-norm]
+  GFS[GFS 0.25° via Open-Meteo] --> ALIGN
+  ALIGN --> T["(1, 6, 8, 128, 128)"]
+  T --> V4[V4 Rainfall]
+  T --> V3[V3 Convective cloud]
+  T --> V1[V1 Hazard proxies]
+  V4 --> API[FastAPI]
+  V3 --> API
+  V1 --> API
+  API --> UI[Megh Setu UI]
 ```
 
+**Stack**
+
+| Layer | Technology |
+| :--- | :--- |
+| Frontend | React 19, TypeScript, Vite 7, Tailwind CDN, Leaflet, Recharts |
+| Backend | Python 3.10+, FastAPI, Pydantic v2, Uvicorn |
+| Inference | PyTorch 2.x (CUDA / Apple MPS / CPU) |
+| Satellite | AWS Open Data `noaa-himawari9` (public, no credentials) |
+| NWP | Open-Meteo operational GFS 0.25° |
+
 ---
 
-## 🚀 Local Development Setup
+## Models
 
-### 1. Backend Setup (FastAPI)
+Shared backbone: **Conv2D encoder → ConvLSTM → Conv2D decoder → four horizon heads**.
 
-#### Prerequisites
-* Python 3.10+
-* PyTorch 2.0+ (CPU, CUDA, or Apple Silicon MPS)
+### V4 — Rainfall (`SIHV4RainfallNowcast`)
 
-#### Installation & Startup
+| | |
+| :--- | :--- |
+| Role | Experimental rain rate + occurrence nowcast |
+| Parameters | 93,208 |
+| Hidden channels | 32 |
+| Heads | `rain` (mm/hr), `rain_probability` \([0,1]\) |
+| Checkpoint | `sih_v4_rain_corrected_best.pth` |
+
+Calibrated against satellite precipitation benchmarks (IMERG-style). Treat as research output, not an official QPF.
+
+### V3 — Convective cloud (`SIHV3Nowcast`)
+
+| | |
+| :--- | :--- |
+| Role | Deep-convection / cold-cloud proxy |
+| Parameters | 200,996 |
+| Hidden channels | 48 |
+| Target | \(P(\text{future B13} < 235\,\text{K})\) |
+| Checkpoint | `sih_v3_best.pth` |
+
+### V1 — Severe weather (`SIHMultiHazardNowcast`)
+
+| | |
+| :--- | :--- |
+| Role | Multi-hazard proxy assessment |
+| Parameters | 93,548 |
+| Hidden channels | 32 |
+| Outputs | Lightning, thunderstorm, hail, cloudburst, downburst scores \([0,1]\) |
+| Checkpoint | `sih_multihazard_v1_best.pth` |
+
+V1 scores are **physics-informed risk indices**, not calibrated event probabilities and not IMD warnings.
+
+---
+
+## Input tensor
+
+Every inference pass uses a frozen training normalization:
+
+\[
+x_{\mathrm{norm}} = (x - \mu) / \sigma
+\]
+
+**Shape:** `(batch=1, time=6, channels=8, height=128, width=128)`
+
+| Idx | Channel | Live source | Meaning | Unit | μ | σ |
+| :---: | :---: | :--- | :--- | :---: | ---: | ---: |
+| 0 | `B13` | Himawari-9 AHI | 10.4 µm IR brightness temperature | K | 258.9513 | 12.8962 |
+| 1 | `t2m` | GFS | 2 m air temperature | °C | 24.3378 | 11.2362 |
+| 2 | `d2m` | GFS | 2 m dewpoint | °C | 17.6339 | 11.1469 |
+| 3 | `u10` | GFS | 10 m zonal wind | m/s | 2.7062 | 2.8719 |
+| 4 | `v10` | GFS | 10 m meridional wind | m/s | 1.7265 | 2.7279 |
+| 5 | `cape` | GFS | Convective available potential energy | J/kg | 720.3760 | 851.9800 |
+| 6 | `cin` | GFS | Convective inhibition | J/kg | 90.9589 | 145.4562 |
+| 7 | `tp` | GFS | Total precipitation accumulation | m | 0.0002 | 0.0007 |
+
+Channel order is strict. Do not permute or re-normalize per request.
+
+---
+
+## Frontend
+
+High-contrast operations UI (`#181818` background, `#2A2A2A` cards, `#60A5FA` headings). Red is reserved for alerts and errors.
+
+| Surface | Purpose |
+| :--- | :--- |
+| **Home** | Dashboard: map, metrics, alerts, trends, health |
+| **Reports** | White, print-ready meteorological SitRep |
+| Map | Leaflet colormap layers with bilinear interpolation |
+| Replay | Scrub +30 / +60 / +90 / +120 min |
+| Inspector | Stations (Dehradun default) or click-to-probe with reverse geocode |
+| Alerts | Threshold engine → Advisory / Watch / Warning |
+| Health | Model load, ingestion freshness, inference latency |
+| Export | JSON / CSV of the current nowcast at the selected point |
+
+---
+
+## API
+
+Base URL: `http://localhost:8000` · OpenAPI: `/docs` · ReDoc: `/redoc`
+
+### Predictions
+
+| Method | Path | What it does |
+| :--- | :--- | :--- |
+| `GET`/`POST` | `/api/v1/nowcast` | Unified V1 + V3 + V4 on live data |
+| `GET`/`POST` | `/api/nowcast` | Same as above (alias) |
+| `GET`/`POST` | `/api/predict/live` | V3-only live convective nowcast |
+| `GET`/`POST` | `/api/predict/demo` | Stored validation tensor (404 if missing — no fake data) |
+| `POST` | `/api/predict` | Custom 6-frame, 8-channel JSON tensor |
+
 ```bash
-# Navigate to backend directory
+curl -s http://localhost:8000/api/v1/nowcast | jq '.status, .data_mode, .base_time, .models'
+```
+
+<details>
+<summary>Sample <code>/api/v1/nowcast</code> payload (truncated)</summary>
+
+```json
+{
+  "status": "success",
+  "data_mode": "live",
+  "base_time": "2026-10-12T03:50:00+00:00",
+  "forecast_horizons": [30, 60, 90, 120],
+  "grid_metadata": {
+    "lat_min": 8.0, "lat_max": 38.0,
+    "lon_min": 68.0, "lon_max": 98.0,
+    "height": 128, "width": 128
+  },
+  "models": {
+    "rain": "SIHV4RainfallNowcast (V4)",
+    "convective_cloud": "SIHV3Nowcast (V3)",
+    "hazards": "V1 Severe Weather Hazard Assessment"
+  },
+  "horizons": {
+    "30": {
+      "horizon_minutes": 30,
+      "rain": { "unit": "mm/hr", "min": 0.0, "max": 2.15, "mean": 0.53, "map": [[]] },
+      "thunderstorm": { "unit": "risk_score [0,1]", "min": 0.10, "max": 0.58, "mean": 0.13, "map": [[]] }
+    }
+  }
+}
+```
+
+</details>
+
+### Health & metadata
+
+| Method | Path | What it does |
+| :--- | :--- | :--- |
+| `GET` | `/` | Service discovery |
+| `GET` | `/api/health` | Device (`cpu`/`cuda`/`mps`) and V1/V3/V4 load flags |
+| `GET` | `/api/health/pipeline` | Himawari S3, GFS, alignment, freshness, latency |
+| `GET` | `/api/model-info` | Architecture, channels, horizons, target semantics |
+
+Live ingestion failures are explicit HTTP errors (`HIMAWARI_DATA_UNAVAILABLE`, `GFS_DATA_UNAVAILABLE`, `TEMPORAL_ALIGNMENT_FAILED`). There is no silent synthetic fallback in operational mode.
+
+---
+
+## Repository layout
+
+```
+Nowcast/
+├── ai_ml/models/          # V1 / V3 / V4 definitions (+ checkpoints if present)
+├── backend/               # FastAPI inference service
+│   ├── data_providers/    # Himawari-9 S3 + GFS / Open-Meteo
+│   ├── models/            # Runtime .pth drop-in folder
+│   ├── routes/            # health.py, prediction.py
+│   ├── utils/             # Normalization & tensor checks
+│   ├── config.py          # Channels, domain, freeze-norm stats
+│   ├── inference.py       # Unified forward pass
+│   ├── model_loader.py    # ConvLSTM classes + checkpoint load
+│   ├── physics.py         # Thermodynamic / hazard proxies
+│   ├── schemas.py         # Pydantic contracts
+│   └── requirements.txt
+├── frontend/              # React 19 + Vite dashboard
+│   └── src/
+│       ├── components/    # Map, alerts, SitRep, health, charts
+│       ├── services/api.ts
+│       ├── types/
+│       └── utils/         # alert engine, geocoding, IST, export
+├── docker-compose.yml
+├── start.sh               # Local backend + frontend launcher
+└── README.md
+```
+
+`.pth` weights are gitignored. Place them at one of the loader paths, for example:
+
+```
+backend/models/sih_v3_best.pth
+ai_ml/models/v4/sih_v4_rain_corrected_best.pth
+ai_ml/models/v1/sih_multihazard_v1_best.pth
+```
+
+---
+
+## Quickstart
+
+**Prerequisites:** Python 3.10+, Node.js 18+, PyTorch 2.x, and the three checkpoints above.
+
+### Option A — `start.sh`
+
+```bash
+./start.sh
+```
+
+| Service | URL |
+| :--- | :--- |
+| Dashboard | http://localhost:5173 |
+| API docs | http://localhost:8000/docs |
+| Health | http://localhost:8000/api/health |
+
+### Option B — manual
+
+**Backend**
+
+```bash
 cd backend
-
-# Create and activate virtual environment
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-# Configure environment
 cp .env.example .env
-
-# Start FastAPI server with live reload
+# Set DATA_PROVIDER=operational for live satellite + NWP
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
-* Interactive API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
-* Health Status Endpoint: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
----
+**Frontend** (second terminal)
 
-### 2. Frontend Setup (React / Vite)
-
-#### Prerequisites
-* Node.js 18+
-* npm or yarn
-
-#### Installation & Startup
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start Vite development server
+cp .env.example .env
 npm run dev
 ```
-* Web Application Dashboard: [http://localhost:5173](http://localhost:5173)
 
-#### Production Build Verification
 ```bash
-cd frontend
-npm run build
+npm run build   # production bundle check
 ```
+
+If `/api/health` reports a missing checkpoint, the API stays up but inference returns **503** until weights are present.
 
 ---
 
-## ⚙️ Environment Configuration
+## Docker
 
-### Backend (`backend/.env`)
 ```bash
-# Model checkpoint path
-MODEL_PATH=./models/sih_v3_best.pth
+docker compose up --build
+```
 
-# Server configuration
+| Service | URL |
+| :--- | :--- |
+| Frontend (nginx) | http://localhost:3000 |
+| Backend | http://localhost:8000 |
+| Docs | http://localhost:8000/docs |
+
+Mount or copy `.pth` files into the backend image/`backend/models` before expecting successful inference.
+
+---
+
+## Environment
+
+### `backend/.env`
+
+```ini
+MODEL_PATH=./models/sih_v3_best.pth
 HOST=0.0.0.0
 PORT=8000
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
 
-# Ingestion provider mode: 'operational' for live satellite/NWP data
+# synthetic | operational
 DATA_PROVIDER=operational
 
-# Operational Data Ingestion Sources
 GFS_OPERATIONAL_API=https://api.open-meteo.com/v1
 HIMAWARI_S3_BUCKET=noaa-himawari9
 ```
 
-### Frontend (`frontend/.env`)
-```bash
-# Backend API base URL
+`DATA_PROVIDER=synthetic` is the example-file default for offline bring-up. Use `operational` for Himawari-9 + GFS.
+
+### `frontend/.env`
+
+```ini
 VITE_API_BASE_URL=http://localhost:8000/api
-
-# Automated refresh interval in seconds
 VITE_REFRESH_INTERVAL=60
-
-# Default initial station
 VITE_DEFAULT_LOCATION=dehradun
 ```
 
----
-
-## ⚠️ Scientific & Operational Disclaimer
-
-* **Research Prototype**: Megh Setu is a meteorological research and decision-support prototype platform developed for the Smart India Hackathon (SIH26084).
-* **Proxy Assessments**: All lightning, thunderstorm, hail, cloudburst, and downburst indicators are proxy risk scores derived from atmospheric instability parameters and are **not** direct calibrated observational sensor readings.
-* **Non-Official Advisory**: Outputs from Megh Setu are intended for meteorological research, situational awareness, and decision support. They do **not** constitute official government weather forecasts or warnings. For official public weather alerts in India, always consult the **India Meteorological Department (IMD)**.
+In Vite dev, `/api` is also proxied to `http://127.0.0.1:8000`. For Vercel, set `VITE_API_BASE_URL` to the public backend origin (including `/api`).
 
 ---
 
-## 👥 Authors & Acknowledgments
+## Disclaimer
 
-* **Project**: Megh Setu — AI-Powered Convective Weather Nowcasting Platform
-* **Competition**: Smart India Hackathon 2024 / 2026 (Problem Statement SIH26084)
-* **Data Providers**: NOAA Open Data Dissemination (Himawari-9 AHI), NOAA NCEP (GFS 0.25° NWP), and Open-Meteo.
+Megh Setu is a **research / hackathon prototype** for SIH26084.
+
+- Hazard layers are **proxy risk scores**, not sensor detections and not calibrated probabilities.
+- Outputs are for situational awareness and decision support only.
+- They **do not replace official IMD forecasts or warnings**.
+
+For public alerts in India, use the [India Meteorological Department](https://mausam.imd.gov.in/).
+
+---
+
+## Acknowledgments
+
+**Megh Setu** — convective nowcasting platform for Smart India Hackathon (`SIH26084`)
+
+Data: [NOAA Open Data Dissemination](https://registry.opendata.aws/noaa-himawari/) (Himawari-9 AHI), NOAA NCEP GFS 0.25°, [Open-Meteo](https://open-meteo.com/).
+
+<div align="center">
+
+<sub>Built for SIH26084 · Nowcasting for meteorological resilience</sub>
+
+</div>
